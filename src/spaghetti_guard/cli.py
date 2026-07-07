@@ -164,6 +164,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         ask_timeout_s=cfg.action.ask_timeout_s,
         ask_timeout_action=cfg.action.ask_timeout_action,
         state_age_provider=state_age_provider,
+        snapshot_max_files=cfg.snapshots.max_files or None,
     )
 
     # Wire UI buttons -> control.

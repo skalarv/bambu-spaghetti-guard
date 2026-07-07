@@ -32,6 +32,9 @@ class FakePahoClient:
         self.on_connect = None
         self.on_disconnect = None
         self.on_message = None
+        self.reconnect_calls = 0
+        self.disconnect_calls = 0
+        self.reconnect_delay: tuple[int, int] | None = None
 
     def username_pw_set(self, username, password):
         self.username = username
@@ -53,7 +56,7 @@ class FakePahoClient:
         pass
 
     def disconnect(self):
-        pass
+        self.disconnect_calls += 1
 
     def subscribe(self, topic, qos=0):
         self.subscribed.append((topic, qos))
@@ -65,13 +68,13 @@ class FakePahoClient:
         return m
 
     def reconnect(self):
-        pass
+        self.reconnect_calls += 1
 
     def reconnect_delay_set(self, min_delay=1, max_delay=120):
         self.reconnect_delay = (min_delay, max_delay)
 
 
-def _build_control(serial="ABC123", dry_run=False) -> tuple[PrinterControl, FakePahoClient]:
+def _build_control(serial="ABC123", dry_run=False, **kwargs) -> tuple[PrinterControl, FakePahoClient]:
     fake = FakePahoClient("test-client")
     pc = PrinterControl(
         host="127.0.0.1",
@@ -79,6 +82,7 @@ def _build_control(serial="ABC123", dry_run=False) -> tuple[PrinterControl, Fake
         access_code="secret",
         dry_run=dry_run,
         client_factory=lambda cid: fake,
+        **kwargs,
     )
     return pc, fake
 
@@ -268,3 +272,69 @@ def test_control_handles_malformed_report():
     pc._on_message(fake, None, msg)  # must not raise
     state, _, _ = pc.state.snapshot()
     assert state == "IDLE"
+
+
+# ---- connect / disconnect callbacks --------------------------------------
+
+
+def test_on_connect_success_subscribes_to_report_topic():
+    pc, fake = _build_control(serial="SER")
+    pc._on_connect(fake, None, {}, 0, None)
+    assert ("device/SER/report", 0) in fake.subscribed
+    assert pc.is_connected is True
+
+
+def test_on_connect_failure_does_not_subscribe():
+    pc, fake = _build_control(serial="SER")
+    pc._on_connect(fake, None, {}, 5, None)  # non-zero reason -> failure
+    assert fake.subscribed == []
+    assert pc.is_connected is False
+
+
+def test_on_disconnect_clears_connected_without_spawning_threads():
+    """Reconnection is paho's job (loop_start auto-reconnects with the delays
+    from reconnect_delay_set). A second hand-rolled reconnect thread racing
+    paho's own can wedge the client — _on_disconnect must stay passive."""
+    import threading
+
+    pc, fake = _build_control()
+    pc._connected.set()
+    before = threading.active_count()
+    pc._on_disconnect(fake, None, {}, 1, None)
+    assert threading.active_count() == before  # no thread spawned
+    assert fake.reconnect_calls == 0  # no direct reconnect either
+    assert pc.is_connected is False
+
+
+def test_reconnect_delay_configured_from_backoff_max():
+    """The backoff ceiling must be handed to paho's built-in reconnect."""
+    pc, fake = _build_control(reconnect_backoff_max_s=45.0)
+    assert fake.reconnect_delay is not None
+    min_delay, max_delay = fake.reconnect_delay
+    assert min_delay >= 1
+    assert max_delay == 45
+
+
+# ---- TLS opt-out ---------------------------------------------------------
+
+
+def test_use_tls_false_skips_tls_setup():
+    _, fake = _build_control(use_tls=False)
+    assert fake.tls_set_called is False
+    assert fake.tls_insecure is False
+
+
+# ---- shutdown resilience ---------------------------------------------------
+
+
+def test_close_still_disconnects_when_loop_stop_raises(monkeypatch):
+    """close() runs in shutdown paths (finally blocks); a loop_stop failure
+    must be swallowed and the disconnect still attempted."""
+    pc, fake = _build_control()
+
+    def boom():
+        raise RuntimeError("nope")
+
+    monkeypatch.setattr(fake, "loop_stop", boom)
+    pc.close()  # must not raise
+    assert fake.disconnect_calls == 1

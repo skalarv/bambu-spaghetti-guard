@@ -45,6 +45,7 @@ notify:
 
 snapshots:
   dir: ./failure_snapshots
+  max_files: 500         # oldest trigger-*.jpg pruned beyond this; 0 = unbounded
 
 log:
   level: INFO

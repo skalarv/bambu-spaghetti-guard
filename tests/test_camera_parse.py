@@ -7,13 +7,17 @@ import struct
 
 import pytest
 
+from unittest.mock import MagicMock
+
 from spaghetti_guard.camera import (
     FRAME_HEADER_LEN,
     JPEG_EOI,
     JPEG_SOI,
+    CameraBackend,
     CameraError,
     CameraStreamClosed,
     LibBackend,
+    RawSocketBackend,
     build_auth_packet,
     iter_frames_from_stream,
     jpeg_is_well_formed,
@@ -93,6 +97,15 @@ def test_parse_frame_header_rejects_bad_length():
         parse_frame_header(bad)
 
 
+def test_parse_frame_header_rejects_wrong_buffer_size():
+    with pytest.raises(ValueError):
+        parse_frame_header(b"\x00" * (FRAME_HEADER_LEN - 1))
+
+
+def test_jpeg_well_formed_rejects_empty_payload():
+    assert jpeg_is_well_formed(b"") is False
+
+
 def test_jpeg_well_formed_checks_both_markers():
     assert jpeg_is_well_formed(make_jpeg())
     assert not jpeg_is_well_formed(b"\x00" * 4 + JPEG_EOI)
@@ -150,6 +163,64 @@ def test_drop_malformed_false_raises():
     bad = make_frame(b"\x00not-a-jpeg")
     with pytest.raises(CameraError):
         list(iter_frames_from_stream(buffer_reader(bad), drop_malformed=False))
+
+
+def test_drop_malformed_false_raises_on_implausible_header_length():
+    """With drop_malformed=False, a bogus header must surface as ValueError."""
+    blob = struct.pack("<I", 99_999_999) + b"\x00" * 12 + b"junk"
+    with pytest.raises(ValueError):
+        list(iter_frames_from_stream(buffer_reader(blob), drop_malformed=False))
+
+
+# ---- backend lifecycle -----------------------------------------------------
+
+
+class _DummyBackend(CameraBackend):
+    def __init__(self):
+        self.connected = False
+        self.closed = False
+
+    def connect(self) -> None:
+        self.connected = True
+
+    def frames(self):
+        return iter([])
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_camera_backend_context_manager():
+    """`with backend:` should connect on enter, close on exit."""
+    b = _DummyBackend()
+    with b as ctx:
+        assert ctx is b
+        assert b.connected is True
+    assert b.closed is True
+
+
+def test_raw_backend_frames_before_connect_raises():
+    backend = RawSocketBackend(host="127.0.0.1", access_code="tok")
+    with pytest.raises(CameraError):
+        list(backend.frames())
+
+
+def test_raw_backend_close_before_connect_is_noop():
+    """cli's finally block calls close() unconditionally — it must be safe
+    even when connect() never ran."""
+    backend = RawSocketBackend(host="127.0.0.1", access_code="tok")
+    backend.close()  # must not raise
+    assert backend._sock is None
+
+
+def test_raw_backend_close_handles_shutdown_oserror():
+    backend = RawSocketBackend(host="127.0.0.1", access_code="x")
+    fake_sock = MagicMock()
+    fake_sock.shutdown.side_effect = OSError("not connected")
+    backend._sock = fake_sock
+    backend.close()  # must not raise
+    fake_sock.close.assert_called_once()
+    assert backend._sock is None
 
 
 # ---- LibBackend stub -----------------------------------------------------

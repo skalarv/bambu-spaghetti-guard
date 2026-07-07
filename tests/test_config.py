@@ -165,6 +165,18 @@ def test_model_path_check_passes_when_file_exists(tmp_path):
     assert cfg.detector.model_path == model
 
 
+def test_yaml_root_not_a_mapping_rejected(tmp_path):
+    p = tmp_path / "bad.yaml"
+    p.write_text("- just\n- a\n- list\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a mapping"):
+        load_config(p, env=_env())
+
+
+def test_missing_yaml_path_rejected(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        load_config(tmp_path / "nope.yaml", env=_env())
+
+
 def test_access_code_not_in_repr(tmp_path):
     """SecretStr must mask the value in any default stringification."""
     cfg = load_config(_write_yaml(tmp_path, _BASE_YAML), env=_env(), check_model_path=False)

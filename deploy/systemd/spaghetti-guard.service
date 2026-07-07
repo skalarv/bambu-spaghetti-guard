@@ -10,6 +10,9 @@ Group=spaghetti
 WorkingDirectory=/opt/bambu-spaghetti-guard
 EnvironmentFile=/etc/spaghetti-guard.env
 ExecStart=/opt/bambu-spaghetti-guard/.venv/bin/spaghetti-guard run
+# The guard exits 3 when the camera-reconnect budget is exhausted and 4 when
+# MQTT connect fails — on-failure covers both, so a dead guard always comes
+# back instead of leaving the print unprotected.
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -21,13 +24,19 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
+# NOTE: PrivateDevices blocks GPU access (/dev/nvidia*, /dev/dri). Fine for
+# CPU inference (Orange Pi / small hosts); comment it out — or add explicit
+# DeviceAllow= rules — on a CUDA host.
 PrivateDevices=true
-ReadWritePaths=/opt/bambu-spaghetti-guard/failure_snapshots /opt/bambu-spaghetti-guard/runs
+ReadWritePaths=/opt/bambu-spaghetti-guard/failure_snapshots
 LockPersonality=true
 MemoryDenyWriteExecute=false
 RestrictRealtime=true
 RestrictSUIDSGID=true
 SystemCallArchitectures=native
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 [Install]
 WantedBy=multi-user.target

@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass
+from unittest.mock import MagicMock
 
 import pytest
 
-from spaghetti_guard.detector import Debouncer, FailureDetector
+from spaghetti_guard.detector import (
+    Debouncer,
+    FailureDetector,
+    _flatten_boxes,
+    decode_jpeg,
+    load_yolo_model,
+)
 
 
 @dataclass
@@ -193,3 +201,66 @@ def test_streak_reports_current_run():
     assert d.streak() == 2
     d.update(False)
     assert d.streak() == 0
+
+
+# ---- _flatten_boxes unit behavior ------------------------------------------
+
+
+def test_flatten_boxes_empty_predictions_is_empty_list():
+    assert _flatten_boxes([]) == []
+
+
+def test_flatten_boxes_unknown_shape_raises():
+    """No cls_name / boxes attribute -> must raise, never silently return []."""
+
+    class _X:
+        pass
+
+    with pytest.raises(ValueError):
+        _flatten_boxes([_X()])
+
+
+# ---- live-path helpers (cv2 / ultralytics mocked) ---------------------------
+
+
+def test_decode_jpeg_invalid_payload_raises(monkeypatch):
+    class FakeCV2:
+        IMREAD_COLOR = 1
+
+        @staticmethod
+        def imdecode(arr, flag):
+            return None  # simulate "not a jpeg"
+
+    monkeypatch.setitem(sys.modules, "cv2", FakeCV2)
+    with pytest.raises(ValueError):
+        decode_jpeg(b"not-a-jpeg")
+
+
+def test_decode_jpeg_returns_decoded_image(monkeypatch):
+    import numpy as np
+
+    class FakeCV2:
+        IMREAD_COLOR = 1
+
+        @staticmethod
+        def imdecode(arr, flag):
+            return np.zeros((10, 10, 3), dtype=np.uint8)
+
+    monkeypatch.setitem(sys.modules, "cv2", FakeCV2)
+    img = decode_jpeg(b"fake")
+    assert img.shape == (10, 10, 3)
+
+
+def test_load_yolo_model_imports_ultralytics_lazily(monkeypatch):
+    """load_yolo_model is the only place ultralytics is imported live."""
+
+    class FakeYOLO:
+        def __init__(self, path):
+            self.path = path
+
+    fake_module = MagicMock()
+    fake_module.YOLO = FakeYOLO
+    monkeypatch.setitem(sys.modules, "ultralytics", fake_module)
+    m = load_yolo_model("x.pt")
+    assert isinstance(m, FakeYOLO)
+    assert m.path == "x.pt"

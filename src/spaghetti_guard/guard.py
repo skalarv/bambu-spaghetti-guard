@@ -90,6 +90,7 @@ class Guard:
         action_retry_s: float = 10.0,
         state_age_provider: Callable[[], float | None] | None = None,
         mqtt_timeout_s: float = 30.0,
+        snapshot_max_files: int | None = 500,
     ) -> None:
         if action_mode not in ("stop", "pause", "ask"):
             raise ValueError(f"action_mode must be stop|pause|ask, got {action_mode}")
@@ -118,6 +119,7 @@ class Guard:
         self._state_age_provider = state_age_provider
         self._mqtt_timeout_s = mqtt_timeout_s
         self._report_stale = False
+        self._snapshot_max_files = snapshot_max_files
 
         self._state = GuardState.IDLE
         # Per-incident bookkeeping for the action-failed retry path.
@@ -329,7 +331,21 @@ class Guard:
             path.write_bytes(jpeg)
         except OSError:
             logger.exception("could not write snapshot %s", path)
+        self._prune_snapshots()
         return path
+
+    def _prune_snapshots(self) -> None:
+        """Keep at most snapshot_max_files trigger images (oldest deleted).
+
+        Timestamped names sort chronologically, so a plain sort suffices."""
+        if not self._snapshot_max_files:
+            return
+        try:
+            snaps = sorted(self._snapshot_dir.glob("trigger-*.jpg"))
+            for old in snaps[: -self._snapshot_max_files]:
+                old.unlink()
+        except OSError:
+            logger.exception("snapshot pruning failed (non-fatal)")
 
     # ---------------------------------------------------------------
     # Watchdog

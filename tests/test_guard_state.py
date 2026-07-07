@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
 
@@ -23,11 +24,13 @@ class FakeBox:
 class FakeYolo:
     def __init__(self):
         self._next_boxes: list[FakeBox] = []
+        self.predict_calls = 0
 
     def set_next(self, boxes: list[FakeBox]) -> None:
         self._next_boxes = boxes
 
     def predict(self, image, **kwargs):
+        self.predict_calls += 1
         return list(self._next_boxes)
 
 
@@ -485,6 +488,106 @@ def test_snapshot_written_on_trigger(env):
     assert len(snaps) == 1
     assert snaps[0].read_bytes() == b"jpeg-bytes"
     assert "spaghetti" in snaps[0].name
+
+
+# ---- cooldown suppresses detection entirely ------------------------------
+
+
+def test_cooldown_skips_detection(env):
+    """While in COOLDOWN with now < cooldown_until, feed_frame must not even
+    invoke the detector — no wasted inference, no state churn."""
+    g = env["make_guard"](debounce_window=1, cooldown_s=30)
+    env["provider"].state = "RUNNING"
+    env["yolo"].set_next([FakeBox("spaghetti", 0.9)])
+    g.feed_frame(b"j")  # fires -> COOLDOWN
+    assert g.state == GuardState.COOLDOWN
+    calls_after_fire = env["yolo"].predict_calls
+    env["clock"].advance(5)  # still cooling
+    g.feed_frame(b"j")
+    assert env["yolo"].predict_calls == calls_after_fire  # detector skipped
+    assert g.state == GuardState.COOLDOWN
+
+
+# ---- fire path resilience -------------------------------------------------
+
+
+class BoomNotifier:
+    """Notifier whose send always raises — simulates ntfy being down."""
+
+    def send(self, title, message, image_path=None):
+        raise RuntimeError("ntfy down")
+
+
+def test_notifier_exception_does_not_block_action(env):
+    g = env["make_guard"](notifier=BoomNotifier(), debounce_window=1)
+    env["provider"].state = "RUNNING"
+    env["yolo"].set_next([FakeBox("spaghetti", 0.9)])
+    r = g.feed_frame(b"j")
+    # Notifier exception must not block the safety action.
+    assert r.fired
+    assert env["control"].stop_calls == 1
+    assert g.state == GuardState.COOLDOWN
+
+
+def test_snapshot_write_failure_does_not_block_action(env, monkeypatch):
+    def boom(self, data):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(Path, "write_bytes", boom)
+    g = env["make_guard"](debounce_window=1)
+    env["provider"].state = "RUNNING"
+    env["yolo"].set_next([FakeBox("spaghetti", 0.9)])
+    r = g.feed_frame(b"j")  # must not raise
+    assert r.fired
+    assert env["control"].stop_calls == 1
+    assert g.state == GuardState.COOLDOWN
+
+
+# ---- viewer integration ---------------------------------------------------
+
+
+def test_viewer_updated_even_when_printer_not_running(env):
+    """When the printer isn't RUNNING the guard still pushes a frame packet
+    (with last_result=None) so the operator sees the live picture."""
+    calls = []
+
+    class RecordingViewer:
+        def update(self, **kwargs):
+            calls.append(kwargs)
+
+        def start(self):
+            pass
+
+        def stop(self):
+            pass
+
+    g = env["make_guard"](viewer=RecordingViewer())
+    g.feed_frame(b"j")  # provider is IDLE
+    assert len(calls) == 1
+    assert calls[0]["last_result"] is None
+
+
+# ---- stop request ---------------------------------------------------------
+
+
+def test_request_stop_sets_stopped_flag(env):
+    g = env["make_guard"]()
+    assert g.stopped is False
+    g.request_stop()
+    assert g.stopped is True
+
+
+def test_run_exits_without_processing_when_stopped_before_start(env):
+    """run() must bail out on a pre-set stop event — no frame may be fed to
+    the detector or fire an action."""
+    g = env["make_guard"](debounce_window=1)
+    env["provider"].state = "RUNNING"
+    env["yolo"].set_next([FakeBox("spaghetti", 0.99)])
+    g.request_stop()
+    g.run(iter([b"f1", b"f2", b"f3"]))
+    assert env["yolo"].predict_calls == 0
+    assert env["control"].stop_calls == 0
+    assert g.state == GuardState.IDLE
 
 
 # ---- invalid construction ---------------------------------------------

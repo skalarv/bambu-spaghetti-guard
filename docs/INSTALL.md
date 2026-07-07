@@ -16,22 +16,21 @@ connect if the printer's IP isn't reachable.
 ```powershell
 git clone <repo> bambu-spaghetti-guard
 cd bambu-spaghetti-guard
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-pip install -e .
+.\tasks.ps1 setup     # venv + `pip install -r requirements.txt` (= -e .[dev])
 ```
 
-For the live detector you also need CUDA-PyTorch and Ultralytics. Pin to
-`cu124` to match the RTX driver:
+For the live detector you also need CUDA-PyTorch and Ultralytics. Use the
+CUDA index matching your GPU (`cu128` for the RTX 5070):
 
 ```powershell
-pip install torch --index-url https://download.pytorch.org/whl/cu124
-pip install ultralytics opencv-python
+.\.venv\Scripts\Activate.ps1
+pip install torch --index-url https://download.pytorch.org/whl/cu128
+pip install -e .[live]
 ```
 
-These three are intentionally **not** in `requirements.txt`. The unit and
-integration suite stubs them so test installs stay fast and disk-light.
+torch/ultralytics/opencv are intentionally **not** default dependencies. The
+unit and integration suite stubs them so test installs stay fast and
+disk-light.
 
 ## Step 3 — Configure
 

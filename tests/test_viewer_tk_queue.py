@@ -114,6 +114,19 @@ def test_stop_without_start_is_noop():
     v.stop()  # must not raise
 
 
+def test_start_is_idempotent_while_thread_exists():
+    """A second start() must not spawn a second UI thread."""
+    from unittest.mock import MagicMock
+
+    v = TkViewer()
+    existing = MagicMock()
+    existing.is_alive.return_value = True
+    v._thread = existing
+    v.start()
+    assert v._thread is existing  # no new thread created
+    existing.start.assert_not_called()
+
+
 # ---- ViewerLogic.current_display includes detection details -----------
 
 

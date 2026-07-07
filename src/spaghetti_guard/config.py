@@ -65,8 +65,10 @@ class DetectorConfig(_Frozen):
     model_path: Path
     conf_threshold: float = 0.55
     consecutive_hits: int = 6
+    # Default matches config.yaml's documented posture: only the two
+    # operationally severe classes fire the guard.
     failure_classes: list[str] = Field(
-        default_factory=lambda: ["spaghetti", "detachment", "blob", "failure"]
+        default_factory=lambda: ["spaghetti", "detachment"]
     )
 
     @field_validator("conf_threshold")
@@ -99,6 +101,8 @@ class NotifyConfig(_Frozen):
 
 class SnapshotConfig(_Frozen):
     dir: Path = Path("./failure_snapshots")
+    # Oldest trigger-*.jpg beyond this count are pruned; 0 disables pruning.
+    max_files: int = 500
 
 
 class LogConfig(_Frozen):

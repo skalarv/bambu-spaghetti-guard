@@ -32,7 +32,7 @@ arrives on.
 | Detector | `src/spaghetti_guard/detector.py` | YOLO call adapter, threshold + class filter, N-of-N debouncer. |
 | Notifier | `src/spaghetti_guard/notifier.py` | ntfy / Telegram / Home Assistant; failures suppressed. |
 | Guard | `src/spaghetti_guard/guard.py` | State machine, watchdog, snapshot logging, run loop. |
-| CLI | `src/spaghetti_guard/cli.py` | argparse front door for run / verify / replay / train / validate. |
+| CLI | `src/spaghetti_guard/cli.py` | argparse front door for run / live-verify / verify / replay / train / validate. |
 | Mock printer | `verification/mock_printer.py` | Fake camera + fake MQTT broker for offline integration. |
 | Replay | `verification/replay_harness.py` | Tune thresholds against recorded clips. |
 | Metrics | `verification/metrics.py` | Precision / recall / latency / FP-per-print-hour. |

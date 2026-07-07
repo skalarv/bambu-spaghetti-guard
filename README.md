@@ -24,23 +24,26 @@ See `bambu_spaghetti_guard_brief.md` for the full implementation brief.
 ## Quickstart (offline / test only)
 
 ```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+.\tasks.ps1 setup      # venv + editable install with test/lint tooling
 # Live-only deps (skip if you only want to run tests):
+.\.venv\Scripts\Activate.ps1
 pip install torch --index-url https://download.pytorch.org/whl/cu128
-pip install ultralytics opencv-python
-.\tasks.ps1 test
+pip install -e .[live]
+.\tasks.ps1 test       # 260 tests
+.\tasks.ps1 lint       # ruff + mypy
+.\tasks.ps1 coverage   # coverage gate (>= 90% on src/)
 ```
 
 ## Live operation
 
 1. Configure printer secrets in `secrets.local.txt` (gitignored — see
    `secrets.local.txt.template`). Required: `BAMBU_IP`, `BAMBU_SERIAL`,
-   `BAMBU_ACCESS_CODE`. LAN Mode must be enabled on the P1S touchscreen.
+   `BAMBU_ACCESS_CODE`; optional `NTFY_TOPIC_URL` / `TELEGRAM_TARGET` for
+   notifications. Both `run` and `live-verify` load this file automatically
+   (explicit env vars win). LAN Mode must be enabled on the P1S touchscreen.
 2. Probe the printer without publishing:
    ```powershell
-   python scripts\live_verify.py
+   spaghetti-guard live-verify        # or: python scripts\live_verify.py
    ```
 3. Dry-run against a real print (real detection, no publish):
    ```powershell
@@ -55,7 +58,7 @@ pip install ultralytics opencv-python
 
 ```
 src/spaghetti_guard/        # runtime (camera, control, detector, guard, cli, viewer, notifier)
-tests/                      # 229 pytest tests, 95.58% coverage
+tests/                      # pytest suite; coverage gated at >= 90% on src/
 verification/               # mock_printer + replay + metrics harness
 training/
   data/{spaghetti-3d, 3d-printing-flaws, sylucauc-3dpfd, merged}/
@@ -86,7 +89,15 @@ Full guide: `docs/RETRAINING.md`.
 - Default action is `pause` (safer while tuning). Flip to `stop` in
   `config.yaml` once trusted.
 - Debounce (`consecutive_hits=6`) means a single bad frame never fires.
-- Camera loss **notifies but never publishes stop** (brief §3.3).
-- MQTT loss triggers exponential-backoff reconnect (never queues actions).
+- The pause/stop publish is **verified** (broker ack within a timeout); an
+  unconfirmed command keeps the guard TRIGGERED, alerts the operator, and
+  retries every ~10 s instead of pretending it acted.
+- The control action fires **before** the (blocking, HTTP) notification.
+- Camera loss **notifies but never publishes stop** (brief §3.3); the
+  watchdog runs on its own thread so a stalled socket can't starve it.
+- A stale printer report (> 30 s without MQTT data) raises an operator alert
+  — a guard trusting stale state is silently unprotected.
+- MQTT loss reconnects with exponential backoff (paho built-in; actions are
+  never queued).
 - `--dry-run` runs the full pipeline including snapshotting but logs the MQTT
   payload instead of publishing.

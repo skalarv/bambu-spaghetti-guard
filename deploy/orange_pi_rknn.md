@@ -18,8 +18,8 @@ GPU workstation always on.
 ### 1. Train as usual on the workstation
 
 ```powershell
-.\tasks.ps1 train
-.\tasks.ps1 validate
+.\tasks.ps1 train --data training\data\merged\data.yaml
+.\tasks.ps1 validate --weights models\yolo11n-spaghetti.pt --data training\data\merged\data.yaml
 ```
 
 You want the PR curve and `fp_per_print_hour` before bothering with the
@@ -35,15 +35,19 @@ On the workstation:
 
 ### 3. Convert ONNX → RKNN
 
-On a Linux host with `rknn-toolkit2`:
+On a Linux host with `rknn-toolkit2`, follow Rockchip's model-conversion
+examples (there is no conversion script in this repo yet — the snippet below
+is the shape of what you'll write, based on the `rknn-toolkit2` API):
 
-```bash
-# Trim layers Rockchip doesn't accelerate (vendor docs); calibration helps int8
-python tools/rknn_convert.py \
-  --onnx models/yolo11n-spaghetti.onnx \
-  --calibration data/calib/*.jpg \
-  --out models/yolo11n-spaghetti.rknn \
-  --target rk3566
+```python
+# convert_rknn.py — sketch; consult Rockchip's yolo examples for the details
+from rknn.api import RKNN
+
+rknn = RKNN()
+rknn.config(target_platform="rk3566")
+rknn.load_onnx("models/yolo11n-spaghetti.onnx")
+rknn.build(do_quantization=True, dataset="calib_images.txt")
+rknn.export_rknn("models/yolo11n-spaghetti.rknn")
 ```
 
 This step is hardware-vendor land; expect to read Rockchip's docs and to

@@ -3,10 +3,11 @@
 Tested on Debian 12 and Ubuntu 24.04. Adapt paths for your distro.
 
 ```bash
-# Install
+# Install (from a git clone — never rsync a working directory, which would
+# copy secrets.local.txt, .venv and training data onto the server)
 sudo useradd --system --home /opt/bambu-spaghetti-guard --shell /usr/sbin/nologin spaghetti
 sudo install -d -o spaghetti -g spaghetti /opt/bambu-spaghetti-guard
-sudo rsync -a --chown spaghetti:spaghetti ./ /opt/bambu-spaghetti-guard/
+sudo -u spaghetti git clone <repo-url> /opt/bambu-spaghetti-guard
 
 # Build venv
 sudo -u spaghetti python3.11 -m venv /opt/bambu-spaghetti-guard/.venv
@@ -22,8 +23,8 @@ BAMBU_IP=192.168.1.50
 BAMBU_SERIAL=01P00A...
 BAMBU_ACCESS_CODE=xxxxxxxx
 EOF
-sudo chmod 600 /etc/spaghetti-guard.env
 sudo chown root:spaghetti /etc/spaghetti-guard.env
+sudo chmod 640 /etc/spaghetti-guard.env  # group-readable: the service user needs it
 
 # Service
 sudo cp /opt/bambu-spaghetti-guard/deploy/systemd/spaghetti-guard.service /etc/systemd/system/

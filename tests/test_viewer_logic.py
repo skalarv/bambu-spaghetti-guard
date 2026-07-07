@@ -72,6 +72,20 @@ def test_status_text_with_trigger_age():
     assert "last trigger" in s
 
 
+def test_status_text_cooldown_omits_streak():
+    s = _status_text(
+        GuardState.COOLDOWN, streak=2, window=6, last_result=None, last_trigger_ts=None
+    )
+    # COOLDOWN should not include the streak counter (only ARMED/ALERTING do)
+    assert "2/6" not in s
+
+
+def test_status_text_zero_conf_omitted():
+    r = FrameResult(hit=False, conf=0.0, best_class=None)
+    s = _status_text(GuardState.ARMED, streak=0, window=6, last_result=r, last_trigger_ts=None)
+    assert "0.00" not in s  # no confidence text when conf == 0
+
+
 # ---- header text -------------------------------------------------------
 
 
