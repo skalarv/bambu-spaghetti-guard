@@ -32,11 +32,28 @@ class PrinterConfig(_Frozen):
     ip: str
     serial: str
     access_code: SecretStr
+    # Optional SHA-256 fingerprint of the printer's TLS certificate (DER).
+    # Get it with:  openssl s_client -connect <ip>:8883 </dev/null 2>/dev/null \
+    #                 | openssl x509 -fingerprint -sha256 -noout
+    # Empty disables pinning (accepts any cert, as before).
+    tls_fingerprint: str = ""
 
     @field_validator("ip")
     @classmethod
     def _ip_must_be_valid(cls, v: str) -> str:
         ipaddress.ip_address(v)
+        return v
+
+    @field_validator("tls_fingerprint")
+    @classmethod
+    def _fingerprint_is_sha256_hex(cls, v: str) -> str:
+        normalized = v.replace(":", "").replace(" ", "").lower()
+        if normalized and (
+            len(normalized) != 64 or any(c not in "0123456789abcdef" for c in normalized)
+        ):
+            raise ValueError(
+                "printer.tls_fingerprint must be a SHA-256 hex digest (64 hex chars)"
+            )
         return v
 
     @field_validator("serial")
@@ -107,6 +124,9 @@ class SnapshotConfig(_Frozen):
 
 class LogConfig(_Frozen):
     level: str = "INFO"
+    # Liveness heartbeat: the guard stamps this file every tick so external
+    # monitoring can tell a dead guard from a quiet one. Empty disables.
+    heartbeat_file: Path | None = None
 
 
 class AppConfig(_Frozen):

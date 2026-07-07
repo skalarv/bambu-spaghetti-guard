@@ -14,6 +14,7 @@
         run-live   - live pipeline, real publish
         train      - fine-tune YOLO (requires CUDA torch + ultralytics)
         validate   - validate weights + emit summary
+        model-gate - regression gate on the active model (P>=0.80 R>=0.60 mAP50>=0.65)
 
 .EXAMPLE
     .\tasks.ps1 setup
@@ -24,7 +25,7 @@
 
 param(
     [Parameter(Position = 0, Mandatory = $true)]
-    [ValidateSet('setup', 'test', 'coverage', 'lint', 'replay', 'run-dry', 'run-live', 'train', 'validate')]
+    [ValidateSet('setup', 'test', 'coverage', 'lint', 'replay', 'run-dry', 'run-live', 'train', 'validate', 'model-gate')]
     [string]$Target,
     # NOTE: not named $Args — that shadows PowerShell's automatic variable and
     # silently swallows arguments.
@@ -96,5 +97,15 @@ switch ($Target) {
             Write-Error 'usage: .\tasks.ps1 validate --weights X --data Y'
         }
         Invoke-WithVenv (@($python, 'training/validate.py') + $Rest)
+    }
+    'model-gate' {
+        # Regression gate: fails (exit 6) if the active model drops below the
+        # floors. Run after every retrain, before promoting new weights.
+        Invoke-WithVenv (@(
+            $python, 'training/validate.py',
+            '--weights', 'models/yolo11n-spaghetti.pt',
+            '--data', 'training/data/merged/data.yaml',
+            '--min-precision', '0.80', '--min-recall', '0.60', '--min-map50', '0.65'
+        ) + $Rest)
     }
 }

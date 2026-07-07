@@ -15,7 +15,7 @@ PIP     = $(VENV)/bin/pip
 PY      = $(VENV)/bin/python
 CLI     = $(VENV)/bin/spaghetti-guard
 
-.PHONY: setup test coverage lint replay run-dry run-live train validate clean
+.PHONY: setup test coverage lint replay run-dry run-live train validate model-gate clean
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -54,6 +54,13 @@ validate:
 	@test -n "$(WEIGHTS)" || (echo "usage: make validate WEIGHTS=<.pt> DATA=<data.yaml>" && exit 2)
 	@test -n "$(DATA)" || (echo "usage: make validate WEIGHTS=<.pt> DATA=<data.yaml>" && exit 2)
 	$(PY) training/validate.py --weights $(WEIGHTS) --data $(DATA) $(EXTRA)
+
+# Regression gate on the active model; exit 6 below the floors. Run after
+# every retrain, before promoting new weights.
+model-gate:
+	$(PY) training/validate.py --weights models/yolo11n-spaghetti.pt \
+	  --data training/data/merged/data.yaml \
+	  --min-precision 0.80 --min-recall 0.60 --min-map50 0.65 $(EXTRA)
 
 # NOTE: deliberately does NOT remove runs/ — it holds training results.
 clean:

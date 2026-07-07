@@ -180,3 +180,30 @@ There's no hard rule. Practical heuristics:
 - Snapshots where the chamber was in a weird state (door open, purging,
   bed clearing). Those aren't representative of "watching a print in progress."
 - Snapshots older than ~6 months if your setup has meaningfully changed.
+
+## Regression gate (mandatory before promoting new weights)
+
+Never overwrite `models/yolo11n-spaghetti.pt` without running the gate:
+
+```powershell
+.\tasks.ps1 model-gate            # or: make model-gate
+```
+
+This validates the active weights against `training/data/merged` and fails
+(exit 6) if any metric drops below the floors: **precision >= 0.80,
+recall >= 0.60, mAP50 >= 0.65** (the 2026-07-07 baseline is P=0.863,
+R=0.684, mAP50=0.721). To gate candidate weights before promotion:
+
+```powershell
+python training\validate.py --weights runs\detect\<name>\weights\best.pt `
+  --data training\data\merged\data.yaml `
+  --min-precision 0.80 --min-recall 0.60 --min-map50 0.65
+```
+
+The summary (with per-floor pass/fail detail) lands at
+`runs/validate/summary.json`.
+
+Known weak spot as of 2026-07-07: the `detachment` class has near-zero
+recall (only 9 instances in the validation split). Since detachment is one
+of the two classes that FIRE the guard, prioritize collecting and labeling
+detachment snapshots in the retraining loop.

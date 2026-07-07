@@ -158,6 +158,38 @@ def test_aggregate_fp_per_hour(tmp_path):
     assert agg.fp_per_print_hour == pytest.approx(60.0)
 
 
+def test_fp_per_hour_denominator_covers_pre_onset_footage(tmp_path):
+    """False alerts are counted on clean clips AND on pre-onset segments of
+    spaghetti clips — the denominator must cover that same footage, or a
+    spaghetti-heavy clip set inflates the rate."""
+    clean = _make_clip(tmp_path / "clean", kind="clean", n_frames=60, fps=1.0)
+
+    # Spaghetti clip: 120 frames, onset at 60, with an engineered pre-onset
+    # false alert (failure markers on frames 20-22).
+    spag = tmp_path / "spag"
+    spag.mkdir()
+    for i in range(120):
+        is_fail = i >= 60 or (20 <= i < 23)
+        _write_jpeg(spag, i, MARKER_FAILURE if is_fail else MARKER_CLEAN)
+    (spag / "labels.json").write_text(
+        json.dumps({"kind": "spaghetti", "failure_onset_frame": 60, "fps": 1.0, "frames": []})
+    )
+
+    det = _build_marker_detector(failure_classes=("spaghetti",), conf_threshold=0.5)
+    ms = []
+    for clip in (clean, spag):
+        rep = replay(iter_jpegs_from_folder(clip), det, debounce_window=3, clip_label=clip.name)
+        ms.append(evaluate_clip(rep, ClipLabels.load(clip / "labels.json")))
+
+    assert ms[0].non_failure_seconds == pytest.approx(60.0)  # whole clean clip
+    assert ms[1].non_failure_seconds == pytest.approx(60.0)  # pre-onset segment
+    assert ms[1].false_alerts == 1
+
+    agg = aggregate(ms)
+    # 1 false alert over (60 clean + 60 pre-onset) s = 30/hour, not 60/hour.
+    assert agg.fp_per_print_hour == pytest.approx(30.0)
+
+
 def test_threshold_sweep_smoke(tmp_path):
     spag = _make_clip(tmp_path / "s", kind="spaghetti", n_frames=20, onset=10, fps=1.0)
     clean = _make_clip(tmp_path / "c", kind="clean", n_frames=20, onset=None, fps=1.0)

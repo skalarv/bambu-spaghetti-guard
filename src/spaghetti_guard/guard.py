@@ -91,6 +91,8 @@ class Guard:
         state_age_provider: Callable[[], float | None] | None = None,
         mqtt_timeout_s: float = 30.0,
         snapshot_max_files: int | None = 500,
+        detector_failure_threshold: int = 10,
+        heartbeat_file: Path | str | None = None,
     ) -> None:
         if action_mode not in ("stop", "pause", "ask"):
             raise ValueError(f"action_mode must be stop|pause|ask, got {action_mode}")
@@ -120,6 +122,13 @@ class Guard:
         self._mqtt_timeout_s = mqtt_timeout_s
         self._report_stale = False
         self._snapshot_max_files = snapshot_max_files
+        # Consecutive feed_frame failures before the operator is alerted that
+        # the guard is effectively blind.
+        self._detector_failure_threshold = detector_failure_threshold
+        self._feed_failures = 0
+        # Liveness heartbeat: tick() stamps this file so external monitoring
+        # can tell a dead guard from a quiet one. None disables.
+        self._heartbeat_file = Path(heartbeat_file) if heartbeat_file else None
 
         self._state = GuardState.IDLE
         # Per-incident bookkeeping for the action-failed retry path.
@@ -358,6 +367,7 @@ class Guard:
         Printer-report staleness is checked in every state: a stale IDLE
         means the guard will never arm, and nobody would notice.
         """
+        self._stamp_heartbeat()
         self._check_report_staleness()
         if self._state not in (GuardState.ARMED, GuardState.ALERTING):
             return
@@ -374,6 +384,14 @@ class Guard:
                 )
             except Exception:
                 logger.exception("notifier raised on camera-loss alert")
+
+    def _stamp_heartbeat(self) -> None:
+        if self._heartbeat_file is None:
+            return
+        try:
+            self._heartbeat_file.write_text(f"{self._now():.3f}\n", encoding="utf-8")
+        except OSError:
+            logger.exception("could not stamp heartbeat file (non-fatal)")
 
     def _check_report_staleness(self) -> None:
         if self._state_age_provider is None:
@@ -437,5 +455,17 @@ class Guard:
                     self.feed_frame(jpeg)
                 except Exception:
                     logger.exception("feed_frame raised; continuing loop")
+                    self._feed_failures += 1
+                    if self._feed_failures == self._detector_failure_threshold:
+                        # Exactly-once per failure streak: the counter only
+                        # passes the threshold again after a success reset it.
+                        self._notify(
+                            "Bambu guard detector failing",
+                            f"{self._feed_failures} consecutive frames failed to "
+                            f"process — the guard is effectively blind. Check the "
+                            f"model / GPU / logs.",
+                        )
+                else:
+                    self._feed_failures = 0
         finally:
             stop_watchdog.set()

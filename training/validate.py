@@ -27,6 +27,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--clean-clips", type=Path, nargs="*", default=[],
                    help="optional held-out clean-clip folders for FP/hour estimate")
     p.add_argument("--summary-out", type=Path, default=Path("runs/validate/summary.json"))
+    # Regression-gate floors: any metric below its floor exits 6, so a
+    # retrained model that lost quality fails CI instead of shipping silently.
+    p.add_argument("--min-precision", type=float, default=None)
+    p.add_argument("--min-recall", type=float, default=None)
+    p.add_argument("--min-map50", type=float, default=None)
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO)
 
@@ -76,9 +81,33 @@ def main(argv: list[str] | None = None) -> int:
         agg = aggregate(clip_metrics)
         summary["fp_per_print_hour"] = agg.fp_per_print_hour
 
+    floors = {
+        "precision": args.min_precision,
+        "recall": args.min_recall,
+        "map50": args.min_map50,
+    }
+    failures = {
+        name: {"floor": floor, "actual": summary[name]}
+        for name, floor in floors.items()
+        if floor is not None and summary[name] < floor
+    }
+    summary["gate"] = {
+        "floors": {k: v for k, v in floors.items() if v is not None},
+        "passed": not failures,
+        "failures": failures,
+    }
+
     args.summary_out.parent.mkdir(parents=True, exist_ok=True)
     args.summary_out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
     logger.info("wrote %s", args.summary_out)
+
+    if failures:
+        for name, info in failures.items():
+            logger.error(
+                "regression gate FAILED: %s=%.3f below floor %.3f",
+                name, info["actual"], info["floor"],
+            )
+        return 6
     return 0
 
 

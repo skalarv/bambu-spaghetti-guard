@@ -6,6 +6,10 @@ printer:
   ip: 192.168.1.50
   serial: REPLACE_WITH_SERIAL
   # access_code MUST come from env (BAMBU_ACCESS_CODE) — never put it here.
+  # Optional but recommended: pin the printer's TLS cert so a LAN MITM can't
+  # read the access code or spoof frames. SHA-256 of the DER cert:
+  #   openssl s_client -connect <ip>:8883 </dev/null | openssl x509 -fingerprint -sha256 -noout
+  tls_fingerprint: ""
 
 camera:
   backend: raw           # raw | lib
@@ -49,3 +53,6 @@ snapshots:
 
 log:
   level: INFO
+  # Liveness: guard stamps this file every ~1s; monitor its mtime to detect a
+  # dead guard. Leave unset/empty to disable.
+  # heartbeat_file: ./guard.heartbeat

@@ -52,6 +52,44 @@ def test_validate_reads_metrics_from_detmetrics_box(tmp_path, monkeypatch):
     assert summary["map50_95"] == pytest.approx(0.42)
 
 
+def test_validate_gate_fails_below_floor(tmp_path, monkeypatch):
+    """--min-* floors turn validate.py into a model regression gate: a
+    retrained model that lost recall must fail CI, not ship silently."""
+    results = types.SimpleNamespace(box=_Box())  # recall = 0.68
+    _install_fake_ultralytics(monkeypatch, results)
+    out = tmp_path / "summary.json"
+
+    rc = validate_main(
+        [
+            "--weights", "w.pt", "--data", "d.yaml", "--summary-out", str(out),
+            "--min-recall", "0.70",  # floor above the model's 0.68
+        ]
+    )
+    assert rc == 6
+    # The summary is still written so the failure is diagnosable.
+    summary = json.loads(out.read_text(encoding="utf-8"))
+    assert summary["recall"] == pytest.approx(0.68)
+    assert summary["gate"]["passed"] is False
+
+
+def test_validate_gate_passes_at_or_above_floor(tmp_path, monkeypatch):
+    results = types.SimpleNamespace(box=_Box())
+    _install_fake_ultralytics(monkeypatch, results)
+    out = tmp_path / "summary.json"
+
+    rc = validate_main(
+        [
+            "--weights", "w.pt", "--data", "d.yaml", "--summary-out", str(out),
+            "--min-precision", "0.80",
+            "--min-recall", "0.60",
+            "--min-map50", "0.65",
+        ]
+    )
+    assert rc == 0
+    summary = json.loads(out.read_text(encoding="utf-8"))
+    assert summary["gate"]["passed"] is True
+
+
 def test_validate_fails_loudly_on_unexpected_results_shape(tmp_path, monkeypatch):
     """No .box on the result → error out; an all-zero summary that looks like
     a catastrophically bad model is worse than a crash."""

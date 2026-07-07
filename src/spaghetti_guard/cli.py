@@ -118,18 +118,21 @@ def _cmd_run(args: argparse.Namespace) -> int:
     detector = _build_detector(cfg, mock_detector=args.mock_detector)
     viewer = _build_viewer(args.viewer)
 
+    tls_fingerprint = cfg.printer.tls_fingerprint or None
     cam = RawSocketBackend(
         host=cfg.printer.ip,
         port=cfg.camera.port,
         username="bblp",
         access_code=cfg.printer.access_code.get_secret_value(),
         recv_timeout_s=cfg.camera.timeout_s + 5.0,
+        tls_fingerprint=tls_fingerprint,
     )
     control = PrinterControl(
         host=cfg.printer.ip,
         serial=cfg.printer.serial,
         access_code=cfg.printer.access_code.get_secret_value(),
         dry_run=dry_run,
+        tls_fingerprint=tls_fingerprint,
     )
 
     notifier = build_notifier(cfg.notify.backend, cfg.notify.target)
@@ -165,6 +168,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         ask_timeout_action=cfg.action.ask_timeout_action,
         state_age_provider=state_age_provider,
         snapshot_max_files=cfg.snapshots.max_files or None,
+        heartbeat_file=cfg.log.heartbeat_file,
     )
 
     # Wire UI buttons -> control.

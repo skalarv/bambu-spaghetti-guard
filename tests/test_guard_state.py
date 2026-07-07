@@ -160,7 +160,7 @@ def test_single_miss_resets_alert(env):
 # ---- disarm transitions -------------------------------------------------
 
 
-@pytest.mark.parametrize("end_state", ["FINISH", "FAILED", "IDLE"])
+@pytest.mark.parametrize("end_state", ["FINISH", "FAILED", "IDLE", "PAUSE"])
 def test_disarms_on_end_state(env, end_state):
     g = env["make_guard"]()
     env["provider"].state = "RUNNING"
@@ -183,6 +183,38 @@ def test_finish_mid_alert_aborts_without_firing(env):
     g.feed_frame(b"j")
     assert g.state == GuardState.IDLE
     assert env["control"].stop_calls == 0
+
+
+def test_pause_resume_cycle_rearms_and_can_fire_again(env):
+    """The loop the guard itself creates: fire → pause → printer reports
+    PAUSE (disarm) → operator clears the bed and resumes → RUNNING (re-arm)
+    → a fresh failure must fire again."""
+    g = env["make_guard"](action_mode="pause", debounce_window=2, cooldown_s=10)
+    env["provider"].state = "RUNNING"
+    env["yolo"].set_next([FakeBox("spaghetti", 0.95)])
+    g.feed_frame(b"j")
+    g.feed_frame(b"j")  # fires -> pause sent
+    assert env["control"].pause_calls == 1
+    assert g.state == GuardState.COOLDOWN
+
+    # Printer acknowledges by reporting PAUSE -> guard disarms.
+    env["provider"].state = "PAUSE"
+    env["yolo"].set_next([])
+    g.feed_frame(b"j")
+    assert g.state == GuardState.IDLE
+
+    # Operator resumes; clean frames while re-armed.
+    env["provider"].state = "RUNNING"
+    g.feed_frame(b"j")
+    assert g.state == GuardState.ARMED
+    assert env["control"].pause_calls == 1  # nothing spurious on re-arm
+
+    # A fresh failure after resume must fire again (disarm cleared cooldown).
+    env["yolo"].set_next([FakeBox("spaghetti", 0.95)])
+    g.feed_frame(b"j")
+    g.feed_frame(b"j")
+    assert env["control"].pause_calls == 2
+    assert g.state == GuardState.COOLDOWN
 
 
 # ---- camera loss policy -------------------------------------------------
@@ -216,6 +248,77 @@ def test_camera_loss_alert_only_once_per_outage(env, monkeypatch):
     g.tick()
     g.tick()
     assert len(calls) == 1  # single alert per outage
+
+
+# ---- liveness heartbeat ----------------------------------------------------
+# "Guard died" must be observable by more than the absence of notifications:
+# tick() stamps a heartbeat file external monitoring can watch.
+
+
+def test_tick_stamps_heartbeat_file(env, tmp_path):
+    hb = tmp_path / "guard.heartbeat"
+    g = env["make_guard"](heartbeat_file=hb)
+    g.tick()
+    assert hb.exists()
+    first = hb.read_text(encoding="utf-8")
+    env["clock"].advance(5)
+    g.tick()
+    assert hb.read_text(encoding="utf-8") != first  # stamp advances
+
+
+def test_heartbeat_stamped_even_when_idle(env, tmp_path):
+    """The heartbeat reports process liveness, not print activity."""
+    hb = tmp_path / "guard.heartbeat"
+    g = env["make_guard"](heartbeat_file=hb)
+    env["provider"].state = "IDLE"
+    g.tick()
+    assert hb.exists()
+
+
+# ---- detector crash-loop escalation ---------------------------------------
+# A permanently broken detector (corrupt weights, CUDA OOM) must not degrade
+# to log-spam while the guard looks healthy — the operator gets one alert
+# per failure streak.
+
+
+class _BoomYolo:
+    def predict(self, image, **kwargs):
+        raise RuntimeError("CUDA OOM")
+
+
+def test_detector_crash_loop_escalates_to_notification(env, tmp_path):
+    notifier = CaptureNotifier()
+    env["provider"].state = "RUNNING"
+    det = FailureDetector(
+        _BoomYolo(), failure_classes=("spaghetti",), conf_threshold=0.5, decoder=lambda j: j
+    )
+    g = env["make_guard"](detector=det, notifier=notifier, detector_failure_threshold=5)
+    g.run(iter([b"j"] * 8), tick_interval_s=999)
+    alerts = [t for t, _ in notifier.sent if "detector" in t.lower()]
+    assert len(alerts) == 1  # exactly once per streak, not per frame
+
+
+def test_detector_failure_counter_resets_on_success(env):
+    notifier = CaptureNotifier()
+    env["provider"].state = "RUNNING"
+
+    class FlakyYolo:
+        def __init__(self):
+            self.n = 0
+
+        def predict(self, image, **kwargs):
+            self.n += 1
+            if self.n % 3 == 0:  # every third frame succeeds
+                return []
+            raise RuntimeError("transient")
+
+    det = FailureDetector(
+        FlakyYolo(), failure_classes=("spaghetti",), conf_threshold=0.5, decoder=lambda j: j
+    )
+    g = env["make_guard"](detector=det, notifier=notifier, detector_failure_threshold=5)
+    g.run(iter([b"j"] * 20), tick_interval_s=999)
+    alerts = [t for t, _ in notifier.sent if "detector" in t.lower()]
+    assert alerts == []  # streaks of 2 never reach the threshold of 5
 
 
 # ---- printer-report staleness -------------------------------------------

@@ -18,6 +18,8 @@ from collections.abc import Callable
 
 import paho.mqtt.client as mqtt
 
+from .camera import normalize_fingerprint, sha256_fingerprint
+
 logger = logging.getLogger(__name__)
 
 MQTT_USERNAME = "bblp"
@@ -95,6 +97,7 @@ class PrinterControl:
         client_factory: Callable[..., mqtt.Client] | None = None,
         reconnect_backoff_max_s: float = 30.0,
         publish_timeout_s: float = 5.0,
+        tls_fingerprint: str | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -103,6 +106,9 @@ class PrinterControl:
         self._dry_run = dry_run
         self._reconnect_backoff_max_s = reconnect_backoff_max_s
         self._publish_timeout_s = publish_timeout_s
+        # Optional SHA-256 pin of the broker's DER certificate (the P1S is
+        # self-signed, so this is the only MITM defense on this channel).
+        self._tls_fingerprint = normalize_fingerprint(tls_fingerprint) if tls_fingerprint else None
         self._state = PrinterState()
         self._connected = threading.Event()
         self._stop_loop = threading.Event()
@@ -202,10 +208,25 @@ class PrinterControl:
         return info
 
     # ---- callbacks ------------------------------------------------------
+    def _peer_cert_matches(self, client) -> bool:
+        try:
+            der = client.socket().getpeercert(binary_form=True)
+        except Exception:
+            logger.exception("could not read peer certificate for pinning")
+            return False
+        return bool(der) and sha256_fingerprint(der) == self._tls_fingerprint
+
     def _on_connect(self, client, userdata, connect_flags, reason_code, properties=None):
         # paho 2.x VERSION2 signature: (client, userdata, connect_flags, reason_code, properties)
         rc = getattr(reason_code, "value", reason_code)
         if rc == 0 or rc == "Success":
+            if self._tls_fingerprint and not self._peer_cert_matches(client):
+                logger.critical(
+                    "MQTT TLS certificate fingerprint mismatch — possible MITM; "
+                    "disconnecting and refusing to send credentials-bearing traffic"
+                )
+                client.disconnect()
+                return
             self._connected.set()
             client.subscribe(self.report_topic, qos=0)
             logger.info("MQTT connected; subscribed to %s", self.report_topic)

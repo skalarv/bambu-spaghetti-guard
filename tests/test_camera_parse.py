@@ -146,6 +146,25 @@ def test_drops_malformed_jpeg_and_continues():
     assert frames == [good]
 
 
+def test_bad_header_resyncs_and_recovers_stream():
+    """One desynced byte must not degrade the stream forever: after a bad
+    header the reader scans to the next JPEG (SOI..EOI) and realigns."""
+    j = make_jpeg(b"\x42" * 20)
+    frame = make_frame(j)
+    garbage = b"\x99" * 7  # breaks the 16-byte header alignment
+    blob = frame + garbage + frame + frame
+    frames = list(iter_frames_from_stream(buffer_reader(blob)))
+    assert len(frames) == 3  # every real frame survives the desync
+    assert frames == [j, j, j]
+
+
+def test_bad_header_then_eof_ends_stream_cleanly():
+    j = make_jpeg(b"\x42" * 20)
+    blob = make_frame(j) + b"\x99" * 5  # trailing garbage, then EOF
+    frames = list(iter_frames_from_stream(buffer_reader(blob)))
+    assert frames == [j]  # no exception; outer loop reconnects
+
+
 def test_eof_at_header_is_clean_end_of_stream():
     """EOF at a frame boundary terminates the generator without raising."""
     assert list(iter_frames_from_stream(buffer_reader(b""))) == []

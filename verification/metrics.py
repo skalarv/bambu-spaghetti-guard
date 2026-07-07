@@ -118,6 +118,10 @@ class ClipMetrics:
     latency_frames: int | None
     latency_s: float | None
     false_alerts: int
+    # Footage where a fire would count as a false alert: the whole clip for
+    # clean clips, the pre-onset segment for spaghetti clips. This is the
+    # denominator footage for fp_per_print_hour.
+    non_failure_seconds: float = 0.0
 
     def to_dict(self) -> dict:
         return {
@@ -132,6 +136,7 @@ class ClipMetrics:
             "latency_frames": self.latency_frames,
             "latency_s": self.latency_s,
             "false_alerts": self.false_alerts,
+            "non_failure_seconds": self.non_failure_seconds,
         }
 
 
@@ -184,6 +189,17 @@ def evaluate_clip(report: ReplayReport, labels: ClipLabels) -> ClipMetrics:
         if labels.kind == "clean" or labels.failure_onset_frame is not None and idx < labels.failure_onset_frame:
             false_alerts += 1
 
+    # Footage on which the false alerts above were counted.
+    if labels.fps > 0:
+        if labels.kind == "clean":
+            non_failure_seconds = report.frame_count / labels.fps
+        elif labels.failure_onset_frame is not None:
+            non_failure_seconds = labels.failure_onset_frame / labels.fps
+        else:
+            non_failure_seconds = 0.0
+    else:
+        non_failure_seconds = 0.0
+
     return ClipMetrics(
         clip=report.clip,
         kind=labels.kind,
@@ -193,16 +209,21 @@ def evaluate_clip(report: ReplayReport, labels: ClipLabels) -> ClipMetrics:
         latency_frames=latency_frames,
         latency_s=latency_s,
         false_alerts=false_alerts,
+        non_failure_seconds=non_failure_seconds,
     )
 
 
 def aggregate(clip_metrics: Iterable[ClipMetrics]) -> AggregateMetrics:
     clips = list(clip_metrics)
     total_false_alerts = sum(c.false_alerts for c in clips)
-    total_clean_seconds = sum(
-        c.frame_count / c.fps for c in clips if c.kind == "clean" and c.fps > 0
+    # Numerator and denominator cover the same footage: everything where a
+    # fire would have been a false alert (clean clips + pre-onset segments).
+    total_non_failure_seconds = sum(c.non_failure_seconds for c in clips)
+    fp_per_hour = (
+        (total_false_alerts / total_non_failure_seconds * 3600.0)
+        if total_non_failure_seconds
+        else 0.0
     )
-    fp_per_hour = (total_false_alerts / total_clean_seconds * 3600.0) if total_clean_seconds else 0.0
 
     latencies = [c.latency_s for c in clips if c.latency_s is not None]
     avg_lat = sum(latencies) / len(latencies) if latencies else None

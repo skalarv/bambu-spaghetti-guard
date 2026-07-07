@@ -17,6 +17,7 @@ raw backend is exercised by the integration test loop.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import socket
 import ssl
@@ -46,6 +47,16 @@ class CameraStreamClosed(CameraError):
 
 class CameraAuthError(CameraError):
     """Authentication packet rejected by the printer."""
+
+
+def sha256_fingerprint(der_cert: bytes) -> str:
+    """SHA-256 hex digest of a DER-encoded certificate (lowercase, no colons)."""
+    return hashlib.sha256(der_cert).hexdigest()
+
+
+def normalize_fingerprint(fp: str) -> str:
+    """Accept `openssl x509 -fingerprint`-style input (colons, uppercase)."""
+    return fp.replace(":", "").replace(" ", "").lower()
 
 
 class CameraBackend(ABC):
@@ -98,6 +109,27 @@ def jpeg_is_well_formed(payload: bytes) -> bool:
     return payload.startswith(JPEG_SOI) and payload.endswith(JPEG_EOI)
 
 
+def _resync_to_next_jpeg(read_exact) -> bytes | None:
+    """After a header desync, scan forward for the next SOI..EOI JPEG.
+
+    Returns the recovered JPEG (so the desync costs zero real frames) and
+    leaves the reader aligned on the following 16-byte header. Returns None
+    if the stream ends during the scan.
+    """
+    # Find the SOI marker byte-by-byte.
+    window = b""
+    try:
+        while window != JPEG_SOI:
+            window = (window + read_exact(1))[-2:]
+        payload = bytearray(JPEG_SOI)
+        # Collect until the EOI marker.
+        while not payload.endswith(JPEG_EOI):
+            payload += read_exact(1)
+    except EOFError:
+        return None
+    return bytes(payload)
+
+
 def iter_frames_from_stream(read_exact, *, drop_malformed: bool = True) -> Iterator[bytes]:
     """Pull length-prefixed JPEG frames from any 'read N bytes or raise' callable.
 
@@ -115,7 +147,13 @@ def iter_frames_from_stream(read_exact, *, drop_malformed: bool = True) -> Itera
             length = parse_frame_header(header)
         except ValueError as e:
             if drop_malformed:
-                logger.warning("dropping frame with bad header: %s", e)
+                # Blindly reading the next 16 bytes after a desync would treat
+                # JPEG data as headers forever; realign on the next JPEG.
+                logger.warning("bad frame header (%s); resyncing to next JPEG", e)
+                recovered = _resync_to_next_jpeg(read_exact)
+                if recovered is None:
+                    return  # stream ended during the scan
+                yield recovered
                 continue
             raise
         try:
@@ -146,6 +184,7 @@ class RawSocketBackend(CameraBackend):
         connect_timeout_s: float = 10.0,
         recv_timeout_s: float = 30.0,
         ssl_context: ssl.SSLContext | None = None,
+        tls_fingerprint: str | None = None,
     ) -> None:
         self._host = host
         self._port = port
@@ -153,6 +192,10 @@ class RawSocketBackend(CameraBackend):
         self._access_code = access_code
         self._connect_timeout_s = connect_timeout_s
         self._recv_timeout_s = recv_timeout_s
+        # Optional SHA-256 pin of the printer's DER certificate. The P1S is
+        # self-signed so CA verification is off; pinning is the only defense
+        # against a LAN MITM reading the access code from the auth packet.
+        self._tls_fingerprint = normalize_fingerprint(tls_fingerprint) if tls_fingerprint else None
         self._sock: ssl.SSLSocket | None = None
         if ssl_context is None:
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -164,6 +207,17 @@ class RawSocketBackend(CameraBackend):
         raw = socket.create_connection((self._host, self._port), timeout=self._connect_timeout_s)
         self._sock = self._ssl_context.wrap_socket(raw, server_hostname=self._host)
         self._sock.settimeout(self._recv_timeout_s)
+        if self._tls_fingerprint:
+            der = self._sock.getpeercert(binary_form=True) or b""
+            actual = sha256_fingerprint(der)
+            if actual != self._tls_fingerprint:
+                # Never send the auth packet (it carries the access code)
+                # over an unverified channel.
+                self.close()
+                raise CameraError(
+                    f"camera TLS certificate fingerprint mismatch: expected "
+                    f"{self._tls_fingerprint}, got {actual} — possible MITM"
+                )
         self._sock.sendall(build_auth_packet(self._username, self._access_code))
 
     def close(self) -> None:
