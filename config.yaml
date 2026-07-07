@@ -1,0 +1,50 @@
+# Non-secret runtime config. Secrets come from secrets.local.txt (see
+# secrets.local.txt.template) or from environment variables; explicit env
+# vars win over the file (e.g. BAMBU_IP overrides printer.ip).
+
+printer:
+  ip: 192.168.1.50
+  serial: REPLACE_WITH_SERIAL
+  # access_code MUST come from env (BAMBU_ACCESS_CODE) — never put it here.
+
+camera:
+  backend: raw           # raw | lib
+  port: 6000
+  timeout_s: 15
+  max_reconnect_attempts: 5
+
+detector:
+  # yolo26n fine-tuned on the merged Roboflow dataset (24,098 imgs, CC BY 4.0):
+  #   spaghetti-3d (715) + 3d-printing-flaws-remapped (9,478) + syLucauc (13,905).
+  # 60 epochs, imgsz=640, batch=32 on RTX 5070.
+  # Final val (best.pt): P=0.86 R=0.68 mAP50=0.72 mAP50-95=0.42.
+  # Peak epoch: mAP50=0.734 at epoch 44.
+  # Canonical classes: spaghetti stringing blob crack detachment over_extrusion under_extrusion.
+  # Only spaghetti + detachment fire the guard — blobs/stringing/etc. are logged
+  # but don't count as a print failure (tune per operator preference).
+  model_path: models/yolo11n-spaghetti.pt
+  conf_threshold: 0.55
+  consecutive_hits: 6
+  failure_classes:
+    - spaghetti
+    - detachment
+
+action:
+  mode: pause            # stop | pause | ask  (ask shows a confirm popup in the viewer)
+  dry_run: false
+  cooldown_s: 30
+  ask_timeout_s: 30      # how long to wait for operator decision in ask mode
+  ask_timeout_action: stop  # what to do if operator doesn't respond in time
+
+notify:
+  backend: none          # none | ntfy | telegram | homeassistant
+  # target may carry a secret (telegram bot token) — prefer setting it via
+  # NTFY_TOPIC_URL / TELEGRAM_TARGET in secrets.local.txt; those override
+  # this value when the matching backend is selected.
+  target: ""
+
+snapshots:
+  dir: ./failure_snapshots
+
+log:
+  level: INFO

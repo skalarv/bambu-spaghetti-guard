@@ -1,0 +1,22 @@
+# Runtime + test deps for steps 1-8 of the brief.
+# Pinned to compatible ranges so a fresh install stays reproducible.
+
+pydantic>=2.6,<3
+pydantic-settings>=2.2,<3
+paho-mqtt>=2.1,<3
+amqtt>=0.11,<0.12
+pyyaml>=6.0,<7
+Pillow>=10,<12
+numpy>=1.26,<3
+httpx>=0.27,<1
+cryptography>=42,<46
+
+# Test deps
+pytest>=8,<9
+pytest-asyncio>=0.23,<0.25
+
+# Live-only (DO NOT install in this session — needed for run-dry / run-live):
+#   torch  (CUDA build per brief §8)
+#   ultralytics
+#   opencv-python
+# Tests stub these via sys.modules patches.

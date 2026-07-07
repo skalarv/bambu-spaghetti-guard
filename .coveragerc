@@ -1,0 +1,29 @@
+[run]
+branch = True
+source =
+    src/spaghetti_guard
+    verification
+omit =
+    # Tk window mainloop is excluded — pure-Tk display code is exercised
+    # only with a real display. ViewerLogic, the testable bit, stays in.
+    src/spaghetti_guard/viewer.py:_run_ui
+    # Training scripts are live-only (require ultralytics/torch); covered
+    # by `--help` smoke during dev but skipped in CI to keep test image lean.
+    training/*
+
+[report]
+show_missing = True
+skip_covered = False
+fail_under = 95
+exclude_lines =
+    pragma: no cover
+    if __name__ == "__main__":
+    if False:
+    raise NotImplementedError
+    if TYPE_CHECKING:
+    \.\.\.
+
+[paths]
+source =
+    src/spaghetti_guard
+    verification

@@ -1,0 +1,29 @@
+# Environments / caches
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.json
+htmlcov/
+*.log
+
+# Secrets — never commit
+.env
+secrets.local.txt
+.claude/settings.local.json
+
+# Runtime artifacts
+failure_snapshots/
+snaps/
+runs/
+
+# Model weights (large binaries; distributed out-of-band)
+models/*.pt
+models/*.onnx
+models/*.rknn
+/*.pt
+
+# Training data (1.2 GB of Roboflow images; see training/datasets.md)
+training/data/

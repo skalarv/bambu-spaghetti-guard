@@ -1,0 +1,33 @@
+[Unit]
+Description=Bambu P1S spaghetti guard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=spaghetti
+Group=spaghetti
+WorkingDirectory=/opt/bambu-spaghetti-guard
+EnvironmentFile=/etc/spaghetti-guard.env
+ExecStart=/opt/bambu-spaghetti-guard/.venv/bin/spaghetti-guard run
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=spaghetti-guard
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/opt/bambu-spaghetti-guard/failure_snapshots /opt/bambu-spaghetti-guard/runs
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

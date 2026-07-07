@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spaghetti-guard"
+version = "0.1.0"
+description = "Self-hosted Bambu P1S spaghetti / print-failure guard"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+readme = "README.md"
+dependencies = [
+    "pydantic>=2.6,<3",
+    "pydantic-settings>=2.2,<3",
+    "paho-mqtt>=2.1,<3",
+    "amqtt>=0.11,<0.12",
+    "pyyaml>=6.0,<7",
+    "Pillow>=10,<12",
+    "numpy>=1.26,<3",
+    "httpx>=0.27,<1",
+    "cryptography>=42,<46",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8,<9",
+    "pytest-asyncio>=0.23,<0.25",
+]
+
+[project.scripts]
+spaghetti-guard = "spaghetti_guard.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+asyncio_mode = "auto"
+pythonpath = ["src", "."]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
