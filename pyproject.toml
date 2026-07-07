@@ -73,7 +73,8 @@ ignore = [
 ]
 
 [tool.mypy]
-python_version = "3.11"
+# No python_version pin: target the running interpreter, else 3.12 runners
+# choke on numpy stubs that use the 3.12-only `type` statement.
 files = ["src"]
 ignore_missing_imports = true
 check_untyped_defs = true
