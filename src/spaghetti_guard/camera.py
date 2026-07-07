@@ -58,7 +58,7 @@ class CameraBackend(ABC):
     @abstractmethod
     def close(self) -> None: ...
 
-    def __enter__(self) -> "CameraBackend":
+    def __enter__(self) -> CameraBackend:
         self.connect()
         return self
 
@@ -120,8 +120,8 @@ def iter_frames_from_stream(read_exact, *, drop_malformed: bool = True) -> Itera
             raise
         try:
             payload = read_exact(length)
-        except EOFError:
-            raise CameraStreamClosed("stream ended mid-payload")
+        except EOFError as e:
+            raise CameraStreamClosed("stream ended mid-payload") from e
         if not jpeg_is_well_formed(payload):
             if drop_malformed:
                 logger.warning("dropping malformed JPEG (no SOI/EOI markers)")

@@ -26,13 +26,13 @@ import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from .detector import Debouncer, FailureDetector, FrameResult
 from .notifier import Notifier
 
-# Imported lazily inside methods to avoid pulling tkinter at import time.
-if False:  # TYPE_CHECKING-style placeholder for the viewer protocol
+if TYPE_CHECKING:
+    # Import-time only: keeps tkinter out of the runtime import graph.
     from .viewer import ViewerLike
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class Guard:
         camera_timeout_s: float = 15.0,
         snapshot_dir: Path | str = "./failure_snapshots",
         now: Callable[[], float] = time.time,
-        viewer: object | None = None,
+        viewer: ViewerLike | None = None,
         ask_timeout_s: float = 30.0,
         ask_timeout_action: str = "stop",
         action_retry_s: float = 10.0,

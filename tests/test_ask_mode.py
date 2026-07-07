@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from spaghetti_guard.detector import FailureDetector, FrameResult
+from spaghetti_guard.detector import FailureDetector
 from spaghetti_guard.guard import Guard, GuardState
 from spaghetti_guard.notifier import NoopNotifier
 from spaghetti_guard.viewer import ConfirmDecision

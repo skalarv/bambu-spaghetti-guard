@@ -28,7 +28,6 @@ from __future__ import annotations
 import argparse
 import logging
 import socket
-import ssl
 import sys
 import threading
 import time
@@ -48,8 +47,8 @@ from spaghetti_guard.cli import (  # noqa: E402
     load_secrets_file,
 )
 from spaghetti_guard.control import PrinterControl  # noqa: E402
-from spaghetti_guard.detector import FailureDetector, FrameResult  # noqa: E402
-from spaghetti_guard.guard import Guard, GuardState  # noqa: E402
+from spaghetti_guard.detector import FailureDetector  # noqa: E402
+from spaghetti_guard.guard import Guard  # noqa: E402
 from spaghetti_guard.notifier import NoopNotifier  # noqa: E402
 from verification.mock_printer import extract_marker  # noqa: E402
 
@@ -67,9 +66,9 @@ def probe_network(host: str, ports: tuple[int, ...] = (6000, 8883), timeout_s: f
     for port in ports:
         t0 = time.monotonic()
         try:
-            with socket.create_connection((host, port), timeout=timeout_s) as s:
+            with socket.create_connection((host, port), timeout=timeout_s):
                 out[port] = {"open": True, "rtt_ms": int((time.monotonic() - t0) * 1000)}
-        except (socket.timeout, ConnectionRefusedError, OSError) as e:
+        except (TimeoutError, ConnectionRefusedError, OSError) as e:
             out[port] = {"open": False, "error": repr(e)}
     return out
 

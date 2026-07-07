@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -324,8 +323,6 @@ def test_main_dispatches_to_subcommand(monkeypatch):
 
 
 def test_main_log_level_parses():
-    rc = cli.main(["--log-level", "DEBUG", "verify"]) if False else None
-    # Just exercise the parser path; we don't actually run verify here.
     args = cli._build_parser().parse_args(["--log-level", "DEBUG", "verify"])
     assert args.log_level == "DEBUG"
 

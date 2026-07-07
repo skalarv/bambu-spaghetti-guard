@@ -26,7 +26,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator, Sequence
 
 from spaghetti_guard.detector import Debouncer, FailureDetector, FrameResult
 

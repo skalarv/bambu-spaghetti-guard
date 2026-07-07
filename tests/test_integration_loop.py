@@ -23,7 +23,6 @@ from spaghetti_guard.detector import FailureDetector
 from spaghetti_guard.guard import Guard, GuardState
 from spaghetti_guard.notifier import NoopNotifier
 from verification.mock_printer import (
-    MARKER_CLEAN,
     MARKER_FAILURE,
     MockConfig,
     MockPrinter,

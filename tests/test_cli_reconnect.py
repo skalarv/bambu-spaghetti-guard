@@ -7,7 +7,6 @@ import signal
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 
 from spaghetti_guard import cli
 
@@ -244,8 +243,6 @@ def test_reconnect_wrapper_stopped_before_exception_check(monkeypatch, tmp_path)
     fake_cam.frames.return_value = iter([])
 
     from spaghetti_guard import guard as guard_mod
-
-    original_run = guard_mod.Guard.run
 
     def patched_run(self, frame_iter, **kw):
         # Consume the (empty) iterator and set stop before returning.

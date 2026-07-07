@@ -7,7 +7,8 @@
     Targets:
         setup      - create venv + install pinned deps + editable install
         test       - run unit + integration tests
-        lint       - basic byte-compile check (full linters are deferred)
+        coverage   - tests with coverage report + fail_under gate
+        lint       - ruff check + mypy
         replay     - replay a clip; pass clip path after target
         run-dry    - live pipeline, log payloads instead of publishing
         run-live   - live pipeline, real publish
@@ -23,7 +24,7 @@
 
 param(
     [Parameter(Position = 0, Mandatory = $true)]
-    [ValidateSet('setup', 'test', 'lint', 'replay', 'run-dry', 'run-live', 'train', 'validate')]
+    [ValidateSet('setup', 'test', 'coverage', 'lint', 'replay', 'run-dry', 'run-live', 'train', 'validate')]
     [string]$Target,
     # NOTE: not named $Args — that shadows PowerShell's automatic variable and
     # silently swallows arguments.
@@ -64,10 +65,12 @@ switch ($Target) {
     'test' {
         Invoke-WithVenv @($python, '-m', 'pytest', '-q')
     }
+    'coverage' {
+        Invoke-WithVenv @($python, '-m', 'pytest', '-q', '--cov', '--cov-report=term-missing')
+    }
     'lint' {
-        # Byte-compile every .py — catches syntax errors without dragging in
-        # a full linter dep. Add ruff / mypy here once they're pinned.
-        Invoke-WithVenv @($python, '-m', 'compileall', '-q', 'src', 'verification', 'tests', 'training')
+        Invoke-WithVenv @($python, '-m', 'ruff', 'check', 'src', 'tests', 'verification', 'training', 'scripts')
+        Invoke-WithVenv @($python, '-m', 'mypy')
     }
     'replay' {
         if ($Rest.Length -lt 1) {

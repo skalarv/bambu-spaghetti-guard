@@ -22,9 +22,10 @@ import logging
 import queue
 import threading
 import time
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Callable, Protocol
+from collections.abc import Callable
+from dataclasses import dataclass
+from enum import StrEnum
+from typing import Protocol
 
 from .detector import FrameResult
 from .guard import GuardState
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class ConfirmDecision(str, Enum):
+class ConfirmDecision(StrEnum):
     STOP = "stop"
     CANCEL = "cancel"
     TIMEOUT = "timeout"

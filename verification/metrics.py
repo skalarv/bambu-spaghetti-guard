@@ -31,9 +31,9 @@ import logging
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
+from collections.abc import Iterable
 
-from spaghetti_guard.detector import Debouncer, FailureDetector
+from spaghetti_guard.detector import FailureDetector
 
 from .replay_harness import (
     ReplayReport,
@@ -58,7 +58,7 @@ class ClipLabels:
     per_frame: dict[int, bool] = field(default_factory=dict)
 
     @classmethod
-    def load(cls, path: Path) -> "ClipLabels":
+    def load(cls, path: Path) -> ClipLabels:
         data = json.loads(path.read_text(encoding="utf-8"))
         per_frame = {
             int(row["index"]): bool(row["is_failure"]) for row in data.get("frames", [])
@@ -181,9 +181,7 @@ def evaluate_clip(report: ReplayReport, labels: ClipLabels) -> ClipMetrics:
     # clips, fires before the onset are false alerts.
     false_alerts = 0
     for idx in report.fired_indices:
-        if labels.kind == "clean":
-            false_alerts += 1
-        elif labels.failure_onset_frame is not None and idx < labels.failure_onset_frame:
+        if labels.kind == "clean" or labels.failure_onset_frame is not None and idx < labels.failure_onset_frame:
             false_alerts += 1
 
     return ClipMetrics(

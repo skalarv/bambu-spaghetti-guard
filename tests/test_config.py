@@ -118,31 +118,31 @@ def test_yaml_with_access_code_rejected(tmp_path):
 
 def test_invalid_ip_rejected(tmp_path):
     bad = _BASE_YAML.replace("192.168.1.50", "not-an-ip")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         load_config(_write_yaml(tmp_path, bad), env=_env(), check_model_path=False)
 
 
 def test_empty_serial_rejected(tmp_path):
     bad = _BASE_YAML.replace("serial: ABC123SERIAL", 'serial: ""')
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         load_config(_write_yaml(tmp_path, bad), env=_env(), check_model_path=False)
 
 
 def test_out_of_range_threshold_rejected(tmp_path):
     bad = _BASE_YAML.replace("conf_threshold: 0.6", "conf_threshold: 1.5")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         load_config(_write_yaml(tmp_path, bad), env=_env(), check_model_path=False)
 
 
 def test_zero_consecutive_hits_rejected(tmp_path):
     bad = _BASE_YAML.replace("consecutive_hits: 4", "consecutive_hits: 0")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         load_config(_write_yaml(tmp_path, bad), env=_env(), check_model_path=False)
 
 
 def test_bad_action_mode_rejected(tmp_path):
     bad = _BASE_YAML.replace("mode: pause", "mode: explode")
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         load_config(_write_yaml(tmp_path, bad), env=_env(), check_model_path=False)
 
 

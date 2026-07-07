@@ -36,16 +36,14 @@ import contextlib
 import io
 import json
 import logging
-import os
 import socket
 import ssl
 import struct
 import tempfile
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
-from typing import Iterable
 
 from amqtt.broker import Broker
 from amqtt.client import MQTTClient
@@ -128,7 +126,7 @@ def generate_self_signed_cert(cert_dir: Path) -> tuple[Path, Path]:
         return cert_path, key_path
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "mock-bambu")])
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -490,7 +488,7 @@ class MockPrinter:
         self.camera: MockCameraServer | None = None
         self.broker: MockMqttBroker | None = None
 
-    async def __aenter__(self) -> "MockPrinter":
+    async def __aenter__(self) -> MockPrinter:
         self._tmpdir = tempfile.TemporaryDirectory(prefix="mock-bambu-")
         cert_dir = Path(self._tmpdir.name)
         cert_path, key_path = generate_self_signed_cert(cert_dir)

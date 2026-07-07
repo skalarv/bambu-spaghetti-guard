@@ -2,14 +2,9 @@
 
 from __future__ import annotations
 
-import argparse
-import asyncio
 import io
 import json
 import struct
-import sys
-import time
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -281,7 +276,7 @@ def test_guard_disarm_only_logs_once(tmp_path):
 
 def test_guard_alerting_to_armed_on_miss(tmp_path):
     """After a hit (ALERTING), a miss must drop back to ARMED without firing."""
-    from spaghetti_guard.detector import FailureDetector, FrameResult
+    from spaghetti_guard.detector import FailureDetector
     from spaghetti_guard.guard import Guard, GuardState
     from spaghetti_guard.notifier import NoopNotifier
 

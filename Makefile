@@ -15,7 +15,7 @@ PIP     = $(VENV)/bin/pip
 PY      = $(VENV)/bin/python
 CLI     = $(VENV)/bin/spaghetti-guard
 
-.PHONY: setup test lint replay run-dry run-live train validate clean
+.PHONY: setup test coverage lint replay run-dry run-live train validate clean
 
 setup:
 	$(PYTHON) -m venv $(VENV)
@@ -28,8 +28,12 @@ setup:
 test:
 	$(PY) -m pytest -q
 
+coverage:
+	$(PY) -m pytest -q --cov --cov-report=term-missing
+
 lint:
-	$(PY) -m compileall -q src verification tests training
+	$(PY) -m ruff check src tests verification training scripts
+	$(PY) -m mypy
 
 replay:
 	@test -n "$(CLIP)" || (echo "usage: make replay CLIP=<path>" && exit 2)

@@ -144,14 +144,12 @@ def promote_to_dataset(
     # Minimal data.yaml — the merge script rewrites everything anyway; this
     # lets the batch stand alone for smoke-testing if desired.
     (batch_root / "data.yaml").write_text(
-        "path: {}\n"
+        f"path: {batch_root.resolve()}\n"
         "train: train/images\n"
         "val: valid/images\n"
         "test: test/images\n"
         "nc: 7\n"
-        "names: [spaghetti, stringing, blob, crack, detachment, over_extrusion, under_extrusion]\n".format(
-            batch_root.resolve()
-        ),
+        "names: [spaghetti, stringing, blob, crack, detachment, over_extrusion, under_extrusion]\n",
         encoding="utf-8",
     )
     return batch_root
@@ -211,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
         print()
         print(f"NEXT: add chamber-{args.batch_tag} to build_sources() in merge_datasets.py,")
         print("then re-run merge + train:")
-        print(f"  python training/merge_datasets.py")
+        print("  python training/merge_datasets.py")
         print(f"  python training/train.py --data training/data/merged/data.yaml --base {args.base} \\")
         print(f"      --epochs {args.epochs} --batch {args.batch} --name chamber-{args.batch_tag}")
         return 0

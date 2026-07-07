@@ -10,7 +10,6 @@ import argparse
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
 
 from spaghetti_guard import cli
 

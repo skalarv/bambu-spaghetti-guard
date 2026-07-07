@@ -14,7 +14,8 @@ import logging
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Protocol
+from typing import Any, Protocol, cast
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -27,12 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 class DetectionBox(Protocol):
-    cls_name: str
-    conf: float
+    @property
+    def cls_name(self) -> str: ...
+    @property
+    def conf(self) -> float: ...
 
 
 class YoloLike(Protocol):
-    def predict(self, image: np.ndarray, **kwargs) -> list[Any]: ...
+    def predict(self, image: Any, **kwargs) -> list[Any]: ...
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +44,7 @@ class YoloLike(Protocol):
 
 
 def _import_cv2():
-    import cv2  # type: ignore
+    import cv2
 
     return cv2
 
@@ -51,9 +54,11 @@ def load_yolo_model(model_path: str | Path) -> YoloLike:
 
     Tests should not call this; pass a fake YoloLike to ``FailureDetector``.
     """
-    from ultralytics import YOLO  # type: ignore
+    from ultralytics import YOLO
 
-    return YOLO(str(model_path))
+    # YOLO's predict() is a superset of YoloLike's (its first parameter is
+    # named `source`); duck-typing wise it satisfies the protocol.
+    return cast(YoloLike, YOLO(str(model_path)))
 
 
 def decode_jpeg(jpeg: bytes) -> np.ndarray:

@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import argparse
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from spaghetti_guard import camera, cli, control, detector, viewer
-from spaghetti_guard.config import load_config
 
 
 # =====================================================================
@@ -122,7 +121,7 @@ def test_use_tls_false_skips_tls_setup():
         called.append(True)
 
     fake.tls_set = boom
-    pc = control.PrinterControl(
+    control.PrinterControl(
         host="127.0.0.1",
         serial="S",
         access_code="tok",

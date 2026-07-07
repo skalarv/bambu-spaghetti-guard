@@ -9,7 +9,6 @@ import pytest
 
 from spaghetti_guard import camera
 from spaghetti_guard.camera import (
-    CameraError,
     CameraStreamClosed,
     FRAME_HEADER_LEN,
     iter_frames_from_stream,
@@ -205,7 +204,7 @@ def test_guard_cooldown_skips_detection(tmp_path):
 
 
 def test_snapshot_write_failure_suppressed(tmp_path, monkeypatch):
-    from spaghetti_guard.detector import FailureDetector, FrameResult
+    from spaghetti_guard.detector import FailureDetector
     from spaghetti_guard.guard import Guard
     from spaghetti_guard.notifier import NoopNotifier
 
@@ -241,7 +240,7 @@ def test_viewer_update_with_none_jpeg(tmp_path):
     """When the printer state isn't RUNNING the guard pushes `jpeg=None` to the
     viewer; it should still go through without error."""
     from spaghetti_guard.detector import FailureDetector
-    from spaghetti_guard.guard import Guard, GuardState
+    from spaghetti_guard.guard import Guard
     from spaghetti_guard.notifier import NoopNotifier
 
     calls = []
