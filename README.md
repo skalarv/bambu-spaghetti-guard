@@ -5,7 +5,9 @@ chamber camera at ~1 fps, runs a YOLO model on each frame, and pauses or stops
 the print over MQTT when a spaghetti / detachment failure is confirmed across
 several consecutive frames.
 
-See `bambu_spaghetti_guard_brief.md` for the full implementation brief.
+See `bambu_spaghetti_guard_brief.md` for the full implementation brief, or
+open **`docs/index.html`** in a browser for the combined installation +
+operation manual (a self-contained HTML page).
 
 ## Current status (as of 2026-07-10)
 
@@ -79,6 +81,7 @@ training/
 models/yolo11n-spaghetti.pt # active detector weights
 scripts/live_verify.py      # end-to-end probe against the real P1S
 docs/{ARCHITECTURE,INSTALL,PROTOCOL,RUNBOOK,SAFETY,RETRAINING}.md
+docs/index.html             # browser manual: installation + operation (self-contained)
 ```
 
 ## Retraining loop

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bambu P1S Spaghetti Guard — Installation &amp; Operation Manual</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1b1f24; --muted:#5b6570; --border:#e3e8ee;
+    --card:#f7f9fb; --accent:#c0392b; --accent-fg:#ffffff;
+    --code-bg:#f2f4f7; --code-fg:#1b1f24; --link:#b8362a;
+    --ok:#1e7d46; --warn:#b26a00; --danger:#c0392b;
+    --th:#eef2f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0f1319; --fg:#e6eaef; --muted:#9aa5b1; --border:#26303b;
+      --card:#161c24; --accent:#e05a4b; --accent-fg:#0f1319;
+      --code-bg:#1a2029; --code-fg:#e6eaef; --link:#f08678;
+      --ok:#4cc380; --warn:#e0a44a; --danger:#e05a4b; --th:#1a222c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1319; --fg:#e6eaef; --muted:#9aa5b1; --border:#26303b;
+    --card:#161c24; --accent:#e05a4b; --accent-fg:#0f1319;
+    --code-bg:#1a2029; --code-fg:#e6eaef; --link:#f08678;
+    --ok:#4cc380; --warn:#e0a44a; --danger:#e05a4b; --th:#1a222c;
+  }
+  :root[data-theme="light"]{
+    --bg:#ffffff; --fg:#1b1f24; --muted:#5b6570; --border:#e3e8ee;
+    --card:#f7f9fb; --accent:#c0392b; --accent-fg:#ffffff;
+    --code-bg:#f2f4f7; --code-fg:#1b1f24; --link:#b8362a;
+    --ok:#1e7d46; --warn:#b26a00; --danger:#c0392b; --th:#eef2f6;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:250px 1fr; gap:0}
+  nav.toc{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    padding:28px 18px; border-right:1px solid var(--border); font-size:14px;
+  }
+  nav.toc h2{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:18px 0 8px}
+  nav.toc a{display:block; color:var(--fg); text-decoration:none; padding:4px 8px; border-radius:6px; opacity:.85}
+  nav.toc a:hover{background:var(--card); opacity:1}
+  main{padding:36px 40px; min-width:0}
+  header.hero{border-bottom:1px solid var(--border); padding-bottom:22px; margin-bottom:8px}
+  .badge{display:inline-block; background:var(--accent); color:var(--accent-fg); font-weight:600; font-size:12px; padding:3px 10px; border-radius:999px; letter-spacing:.03em}
+  h1{font-size:30px; margin:14px 0 6px; line-height:1.2}
+  h2{font-size:23px; margin:38px 0 10px; padding-top:8px; border-top:1px solid var(--border)}
+  h2:first-of-type{border-top:none}
+  h3{font-size:18px; margin:24px 0 8px}
+  p,li{color:var(--fg)}
+  .lede{color:var(--muted); font-size:17px; max-width:70ch}
+  a{color:var(--link)}
+  code{background:var(--code-bg); color:var(--code-fg); padding:1.5px 6px; border-radius:5px; font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; font-size:.9em}
+  pre{background:var(--code-bg); color:var(--code-fg); padding:16px 18px; border-radius:10px; overflow-x:auto; border:1px solid var(--border); font-size:14px; line-height:1.55}
+  pre code{background:none; padding:0}
+  .step{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:4px 22px 18px; margin:16px 0}
+  .step h3{display:flex; align-items:center; gap:10px}
+  .num{display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:var(--accent); color:var(--accent-fg); font-size:15px; font-weight:700; flex:none}
+  .callout{border-left:4px solid var(--muted); background:var(--card); padding:12px 16px; border-radius:0 8px 8px 0; margin:16px 0}
+  .callout.warn{border-color:var(--warn)}
+  .callout.danger{border-color:var(--danger)}
+  .callout.ok{border-color:var(--ok)}
+  .callout .tag{font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.05em}
+  .callout.warn .tag{color:var(--warn)}
+  .callout.danger .tag{color:var(--danger)}
+  .callout.ok .tag{color:var(--ok)}
+  .tablewrap{overflow-x:auto; margin:14px 0}
+  table{border-collapse:collapse; width:100%; font-size:14.5px}
+  th,td{border:1px solid var(--border); padding:9px 12px; text-align:left; vertical-align:top}
+  th{background:var(--th); font-weight:600}
+  td code{white-space:nowrap}
+  footer{margin-top:44px; padding-top:18px; border-top:1px solid var(--border); color:var(--muted); font-size:14px}
+  .themebtn{position:fixed; top:14px; right:16px; z-index:10; background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer}
+  @media (max-width:860px){
+    .wrap{grid-template-columns:1fr}
+    nav.toc{position:static; height:auto; border-right:none; border-bottom:1px solid var(--border)}
+    main{padding:24px 18px}
+  }
+</style>
+</head>
+<body>
+<button class="themebtn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark';r.setAttribute('data-theme',d?'light':'dark');})()">◐ theme</button>
+<div class="wrap">
+<nav class="toc">
+  <h2>Manual</h2>
+  <a href="#overview">Overview</a>
+  <a href="#requirements">Requirements</a>
+  <h2>Installation</h2>
+  <a href="#printer">1 · Prepare the printer</a>
+  <a href="#workstation">2 · Set up the workstation</a>
+  <a href="#configure">3 · Configure secrets</a>
+  <a href="#notifications">4 · Notifications (ntfy)</a>
+  <a href="#model">5 · Get a model</a>
+  <a href="#verify">6 · Verify offline</a>
+  <a href="#dryrun">7 · Dry-run a real print</a>
+  <a href="#golive">8 · Go live</a>
+  <h2>Operation</h2>
+  <a href="#daily">Daily check</a>
+  <a href="#modes">Action modes</a>
+  <a href="#cli">CLI reference</a>
+  <a href="#config">Config reference</a>
+  <a href="#alerts">Alert events</a>
+  <a href="#troubleshoot">Troubleshooting</a>
+  <a href="#safety">Safety posture</a>
+</nav>
+
+<main>
+<header class="hero">
+  <span class="badge">Bambu Lab P1S</span>
+  <h1>Spaghetti Guard — Installation &amp; Operation Manual</h1>
+  <p class="lede">A self-hosted print-failure detector. It watches the P1S chamber camera at ~1&nbsp;fps, runs a YOLO model on every frame, and pauses or stops the print over MQTT when a spaghetti or detachment failure is confirmed across several consecutive frames.</p>
+</header>
+
+<section id="overview">
+<h2>Overview</h2>
+<p>The guard connects to the printer's LAN interface on two channels: the camera stream (TCP&nbsp;6000, TLS) and the MQTT report/command bus (TCP&nbsp;8883, TLS). It only runs detection while the printer reports it is actively printing (<code>gcode_state == RUNNING</code>), and it never publishes a stop on the mere absence of camera frames. On a confirmed failure it takes the configured action (pause / stop / ask), writes a snapshot JPEG, and pushes a notification.</p>
+<div class="callout ok"><span class="tag">Status</span> — Detection validated on a real ~2.4&nbsp;hour print with zero false triggers. ntfy notifications are live and delivering to a subscribed phone.</div>
+</section>
+
+<section id="requirements">
+<h2>Requirements</h2>
+<div class="tablewrap"><table>
+<tr><th>Item</th><th>Detail</th></tr>
+<tr><td>Printer</td><td>Bambu Lab P1S (also A1 / P1P — port 6000 camera). X1 / H2D use port 322 and are not covered.</td></tr>
+<tr><td>Network</td><td>Printer on a static LAN IP, <strong>LAN Mode enabled</strong> on the touchscreen.</td></tr>
+<tr><td>Workstation</td><td>Windows 10/11 with Python 3.11. Optional NVIDIA GPU for faster inference.</td></tr>
+<tr><td>Live deps</td><td><code>torch</code> (CUDA build), <code>ultralytics</code>, <code>opencv-python</code> — installed separately from the test deps.</td></tr>
+</table></div>
+</section>
+
+<h2 id="installation" style="border-top:none;margin-bottom:0">Installation</h2>
+
+<div class="step" id="printer">
+<h3><span class="num">1</span> Prepare the printer</h3>
+<ol>
+<li>On the P1S touchscreen: <strong>Settings → General → LAN Mode</strong> (or <em>Developer Mode</em> on older firmware) → turn it <strong>on</strong>.</li>
+<li>In your router, give the P1S a <strong>static IP</strong> (DHCP reservation by MAC).</li>
+<li>Note the <strong>LAN access code</strong> (Settings → General → LAN Mode) and the <strong>serial number</strong> (Settings → Device).</li>
+</ol>
+<div class="callout"><span class="tag">Note</span> The guard refuses to publish if LAN Mode is off, and refuses to connect if the printer IP isn't reachable.</div>
+</div>
+
+<div class="step" id="workstation">
+<h3><span class="num">2</span> Set up the workstation</h3>
+<pre><code>git clone https://github.com/skalarv/bambu-spaghetti-guard.git
+cd bambu-spaghetti-guard
+.\tasks.ps1 setup          # venv + pinned deps + editable install</code></pre>
+<p>For the live detector, add CUDA-PyTorch and Ultralytics. Use the CUDA index matching your GPU (<code>cu128</code> for an RTX 50-series / Blackwell card):</p>
+<pre><code>.\.venv\Scripts\Activate.ps1
+pip install torch --index-url https://download.pytorch.org/whl/cu128
+pip install -e .[live]</code></pre>
+<div class="callout"><span class="tag">Why separate</span> torch/ultralytics/opencv are intentionally not default deps so the test install stays fast and disk-light.</div>
+</div>
+
+<div class="step" id="configure">
+<h3><span class="num">3</span> Configure secrets</h3>
+<pre><code>copy secrets.local.txt.template secrets.local.txt</code></pre>
+<p>Edit <code>secrets.local.txt</code> (git-ignored — never committed):</p>
+<pre><code>BAMBU_IP=192.168.50.51
+BAMBU_SERIAL=01P00A3B1300712
+BAMBU_ACCESS_CODE=&lt;8-char code from touchscreen&gt;</code></pre>
+<p>Both <code>run</code> and <code>live-verify</code> load this file automatically; explicit environment variables take precedence. The access code is <strong>env-only</strong> — putting it in <code>config.yaml</code> fails validation. Then tune <code>config.yaml</code>: <code>action.mode</code> (start with <code>pause</code>), <code>detector.conf_threshold</code>, and <code>detector.consecutive_hits</code>.</p>
+</div>
+
+<div class="step" id="notifications">
+<h3><span class="num">4</span> Push notifications (ntfy)</h3>
+<p>The quickest path, no signup:</p>
+<ol>
+<li>Pick a <strong>unique, hard-to-guess</strong> topic (ntfy topics are public), e.g. <code>spaghetti-guard-yz-cc3d60022c</code>, and set it in <code>secrets.local.txt</code>:
+<pre><code>NTFY_TOPIC_URL=https://ntfy.sh/&lt;your-topic&gt;</code></pre></li>
+<li>Set the backend in <code>config.yaml</code>:
+<pre><code>notify:
+  backend: ntfy</code></pre></li>
+<li>Install the <strong>ntfy</strong> app on your phone and <strong>subscribe to the same topic</strong>. Until you subscribe, alerts reach the server but not your phone.</li>
+</ol>
+<div class="callout warn"><span class="tag">TLS on inspected networks</span> The notifier verifies HTTPS against the <strong>OS trust store</strong> (<code>ssl.create_default_context()</code> in <code>notifier.py</code>), not the bundled <code>certifi</code> roots. On a corporate / TLS-inspection LAN this is what lets alerts through. Do <strong>not</strong> "fix" a <code>CERTIFICATE_VERIFY_FAILED</code> by installing <code>pip-system-certs</code> — it globally patches <code>ssl</code> and breaks the P1S MQTT handshake.</div>
+</div>
+
+<div class="step" id="model">
+<h3><span class="num">5</span> Get a model</h3>
+<p>The active weights ship at <code>models/yolo11n-spaghetti.pt</code> (yolo26n fine-tuned on 24,098 CC-BY images; val P=0.86 R=0.68 mAP50=0.72). Point <code>detector.model_path</code> at your own weights to swap it. See <code>docs/RETRAINING.md</code> to adapt the model to your chamber.</p>
+</div>
+
+<div class="step" id="verify">
+<h3><span class="num">6</span> Verify offline (mandatory)</h3>
+<pre><code>.\tasks.ps1 test                       # full unit + integration suite
+.\tasks.ps1 replay &lt;path-to-clip&gt;       # tune thresholds on recorded footage</code></pre>
+<p>Every test must pass before pointing the guard at the real machine.</p>
+</div>
+
+<div class="step" id="dryrun">
+<h3><span class="num">7</span> Dry-run against a real print</h3>
+<pre><code>.\tasks.ps1 run-dry</code></pre>
+<p>This runs the full live pipeline — real camera, real detector, real MQTT parsing — but <strong>logs the action payload instead of publishing it</strong>. Run through a normal print (confirm it stays silent) and a deliberately failed one (an already-detached print is the easiest reproducer). You'll see <code>guard ARMED</code> when the print starts and any <code>Print-failure detected</code> lines it would have acted on.</p>
+<div class="callout ok"><span class="tag">Safe end-to-end check</span> You can also run <code>spaghetti-guard live-verify</code> — dry-run + a never-fires detector + the viewer window — purely to confirm the camera handshake on new firmware.</div>
+</div>
+
+<div class="step" id="golive">
+<h3><span class="num">8</span> Go live</h3>
+<p>When you trust the detection, run for real (drops <code>--dry-run</code>):</p>
+<pre><code>.\tasks.ps1 run-live            # starts in action.mode = pause</code></pre>
+<p>Or double-click the desktop launcher <strong><code>Spaghetti Guard - LIVE.bat</code></strong>, which runs <code>spaghetti-guard run --viewer</code> (real publish) and keeps the camera window open. <strong>Ctrl+C</strong> shuts the guard down cleanly; the printer keeps printing.</p>
+<div class="callout danger"><span class="tag">Live means live</span> In this mode a confirmed failure sends a real pause/stop to the printer. Promote from <code>pause</code> to <code>stop</code> only after you've watched several real triggers behave correctly.</div>
+</div>
+
+<h2 id="operation" style="border-top:none;margin-bottom:0">Operation</h2>
+
+<section id="daily">
+<h3>Daily check (15 seconds)</h3>
+<ol>
+<li>Is the guard process alive? (<code>Get-Process spaghetti-guard</code>, or the LIVE.bat window is still open.)</li>
+<li>Is the most recent log line within the last minute?</li>
+<li>Is <code>failure_snapshots/</code> empty since your last review? If not, review the JPEGs.</li>
+</ol>
+</section>
+
+<section id="modes">
+<h3>Action modes</h3>
+<div class="tablewrap"><table>
+<tr><th>Mode</th><th>Behaviour</th><th>Use when</th></tr>
+<tr><td><code>pause</code></td><td>Pauses the print; hot-end stays warm; filament saved for inspection.</td><td>Building trust; a person is nearby to act.</td></tr>
+<tr><td><code>stop</code></td><td>Stops the print immediately; frees the printer; the print is discarded.</td><td>Long unattended prints, once detection is trusted.</td></tr>
+<tr><td><code>ask</code></td><td>Shows a confirm popup in the viewer; on timeout falls back to <code>ask_timeout_action</code>.</td><td>You watch the viewer and want the final call.</td></tr>
+</table></div>
+</section>
+
+<section id="cli">
+<h3>CLI reference</h3>
+<div class="tablewrap"><table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>spaghetti-guard run</code></td><td>Live guard against the real printer (real publish). Flags: <code>--dry-run</code>, <code>--viewer</code>, <code>--action stop|pause|ask</code>.</td></tr>
+<tr><td><code>spaghetti-guard live-verify</code></td><td>Dry-run + never-fires detector + viewer — safe camera/MQTT handshake check.</td></tr>
+<tr><td><code>spaghetti-guard verify</code></td><td>Run the integration suite against the mock printer.</td></tr>
+<tr><td><code>spaghetti-guard replay &lt;clip&gt;</code></td><td>Replay recorded footage; report which frame the debouncer would fire on.</td></tr>
+<tr><td><code>.\tasks.ps1 &lt;target&gt;</code></td><td>Wrapper: <code>setup</code>, <code>test</code>, <code>coverage</code>, <code>lint</code>, <code>replay</code>, <code>run-dry</code>, <code>run-live</code>, <code>train</code>, <code>validate</code>, <code>model-gate</code>.</td></tr>
+</table></div>
+</section>
+
+<section id="config">
+<h3>Config reference (<code>config.yaml</code>)</h3>
+<div class="tablewrap"><table>
+<tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
+<tr><td><code>printer.ip</code></td><td>—</td><td>Printer LAN IP (overridable via <code>BAMBU_IP</code>).</td></tr>
+<tr><td><code>printer.tls_fingerprint</code></td><td>empty</td><td>Optional SHA-256 of the printer cert to pin against a LAN MITM.</td></tr>
+<tr><td><code>camera.timeout_s</code></td><td>15</td><td>Seconds of camera silence before a (non-fatal) camera-loss alert.</td></tr>
+<tr><td><code>camera.max_reconnect_attempts</code></td><td>5</td><td>Consecutive dead reconnects before the run loop exits (code&nbsp;3 → service restart).</td></tr>
+<tr><td><code>detector.conf_threshold</code></td><td>0.55</td><td>Minimum confidence for a frame to count as a hit.</td></tr>
+<tr><td><code>detector.consecutive_hits</code></td><td>6</td><td>Confirmed hits in a row before firing — the primary false-positive defence.</td></tr>
+<tr><td><code>detector.failure_classes</code></td><td>spaghetti, detachment</td><td>Which classes fire the guard; others are logged only.</td></tr>
+<tr><td><code>action.mode</code></td><td>pause</td><td><code>pause</code> | <code>stop</code> | <code>ask</code>.</td></tr>
+<tr><td><code>action.cooldown_s</code></td><td>30</td><td>Quiet window after a fire before re-arming.</td></tr>
+<tr><td><code>notify.backend</code></td><td>ntfy</td><td><code>none</code> | <code>ntfy</code> | <code>telegram</code> | <code>homeassistant</code>.</td></tr>
+<tr><td><code>snapshots.dir</code></td><td>./failure_snapshots</td><td>Where trigger JPEGs are written.</td></tr>
+</table></div>
+</section>
+
+<section id="alerts">
+<h3>Alert events</h3>
+<p>With <code>notify.backend: ntfy</code>, these push to your phone:</p>
+<div class="tablewrap"><table>
+<tr><th>Alert</th><th>Trigger</th></tr>
+<tr><td><strong>Spaghetti detected</strong></td><td>Confirmed failure (N consecutive hits). Includes the snapshot image.</td></tr>
+<tr><td><strong>Action FAILED</strong></td><td>A pause/stop command did not reach the printer — check it immediately. Retries every ~10&nbsp;s.</td></tr>
+<tr><td><strong>Camera silent</strong></td><td>No frame for <code>camera.timeout_s</code> while armed. Logged; no action taken.</td></tr>
+<tr><td><strong>Printer reports silent</strong></td><td>No MQTT report for ~30&nbsp;s — the guard may be silently unprotected.</td></tr>
+</table></div>
+</section>
+
+<section id="troubleshoot">
+<h3>Troubleshooting</h3>
+<div class="tablewrap"><table>
+<tr><th>Symptom</th><th>Diagnosis</th><th>Fix</th></tr>
+<tr><td><code>MQTT command verification failed</code></td><td>LAN Mode disabled or wrong access code.</td><td>Re-enable LAN Mode; re-copy the access code into <code>secrets.local.txt</code>.</td></tr>
+<tr><td><code>socket.gaierror</code> on startup</td><td><code>BAMBU_IP</code> wrong or printer offline.</td><td>Confirm the static IP; ping the printer.</td></tr>
+<tr><td>Trips during normal prints</td><td>Threshold/debounce too low for this chamber.</td><td>Raise <code>conf_threshold</code> +0.05 or <code>consecutive_hits</code> +1–2; retrain on the false-positive footage.</td></tr>
+<tr><td>Every alert <code>CERTIFICATE_VERIFY_FAILED</code></td><td>TLS-inspection proxy root CA not in <code>certifi</code>.</td><td>Handled — notifier uses the OS trust store. Do <strong>not</strong> install <code>pip-system-certs</code>.</td></tr>
+<tr><td>No ntfy push (log says delivered)</td><td>Not subscribed on the phone.</td><td>Open the ntfy app → subscribe to the exact <code>NTFY_TOPIC_URL</code> topic.</td></tr>
+<tr><td>Camera-loss alert keeps firing</td><td>Stream slower than <code>camera.timeout_s</code>.</td><td>Raise <code>camera.timeout_s</code> (e.g. 15 → 20); confirm the printer IP is stable.</td></tr>
+</table></div>
+</section>
+
+<section id="safety">
+<h3>Safety posture</h3>
+<ul>
+<li>This is a last line of defence against runaway spaghetti — it is <strong>not</strong> a fire alarm. It cannot see smoke, hot-end fire, or thermal runaway.</li>
+<li>Detection runs <strong>only</strong> while the printer reports <code>RUNNING</code>; it disarms on FINISH / FAILED / IDLE / PAUSE.</li>
+<li>Camera loss <strong>never</strong> publishes a stop — a missing frame is not evidence of failure.</li>
+<li>The pause/stop publish is verified against a broker ack; an unconfirmed command keeps the guard TRIGGERED, alerts you, and retries rather than pretending it acted.</li>
+<li>For long unattended prints prefer <code>stop</code> over <code>pause</code> — a paused printer with a hot nozzle is marginally worse than a stopped one.</li>
+<li>To stop the <em>printer</em> manually, use the touchscreen or Bambu app — not by killing the guard.</li>
+</ul>
+</section>
+
+<footer>
+Bambu P1S Spaghetti Guard · full source and Markdown docs at
+<a href="https://github.com/skalarv/bambu-spaghetti-guard">github.com/skalarv/bambu-spaghetti-guard</a>.
+See also <code>docs/INSTALL.md</code>, <code>docs/RUNBOOK.md</code>, <code>docs/SAFETY.md</code>, <code>docs/ARCHITECTURE.md</code>, <code>docs/PROTOCOL.md</code>, <code>docs/RETRAINING.md</code>.
+</footer>
+</main>
+</div>
+</body>
+</html>

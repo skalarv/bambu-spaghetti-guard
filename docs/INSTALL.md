@@ -1,5 +1,9 @@
 # Install
 
+> Prefer a browser? Open **`docs/index.html`** for the same steps plus the
+> operation manual, config reference, and troubleshooting in one self-contained
+> HTML page.
+
 ## Step 1 — Prepare the printer
 
 1. Open the P1S touchscreen → **Settings → General → LAN Mode** (or
