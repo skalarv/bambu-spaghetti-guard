@@ -7,7 +7,7 @@ several consecutive frames.
 
 See `bambu_spaghetti_guard_brief.md` for the full implementation brief.
 
-## Current status (as of 2026-07-07)
+## Current status (as of 2026-07-10)
 
 - **Model**: `models/yolo11n-spaghetti.pt` — yolo26n fine-tuned on 24,098 CC-BY
   images from Roboflow Universe (spaghetti-3d + 3d-printing-flaws + syLucauc).
@@ -16,6 +16,15 @@ See `bambu_spaghetti_guard_brief.md` for the full implementation brief.
 - **Live-verify**: passes end-to-end against the operator's P1S
   (camera port 6000 + MQTT port 8883, LAN Mode enabled; printer IP lives in
   `secrets.local.txt`).
+- **Dry-run through a real ~2.4h print (2026-07-10)**: 0 false triggers;
+  detection armed/disarmed correctly on printer state. Observed 7 brief
+  camera-silent dropouts (~15s each) — logged, no action taken (correct).
+- **Notifications**: `notify.backend: ntfy` is live; topic in
+  `secrets.local.txt` (`NTFY_TOPIC_URL`). The notifier verifies HTTPS against
+  the **OS trust store**, so alerts survive this LAN's TLS-inspection proxy.
+  Subscribe to the topic in the ntfy phone app to receive pushes.
+- **Desktop launcher**: `Spaghetti Guard - LIVE.bat` on the operator's desktop
+  runs `spaghetti-guard run --viewer` (real publish).
 - **Guard runtime**: camera-reconnect wrapper caps at
   `camera.max_reconnect_attempts` *consecutive* dead reconnects (default 5;
   the budget resets after any healthy streaming), then exits with code 3 so
@@ -41,6 +50,8 @@ pip install -e .[live]
    `BAMBU_ACCESS_CODE`; optional `NTFY_TOPIC_URL` / `TELEGRAM_TARGET` for
    notifications. Both `run` and `live-verify` load this file automatically
    (explicit env vars win). LAN Mode must be enabled on the P1S touchscreen.
+   For push alerts, set `notify.backend: ntfy` in `config.yaml` and subscribe
+   to your `NTFY_TOPIC_URL` topic in the ntfy phone app (see `docs/INSTALL.md`).
 2. Probe the printer without publishing:
    ```powershell
    spaghetti-guard live-verify        # or: python scripts\live_verify.py

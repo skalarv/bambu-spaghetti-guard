@@ -30,7 +30,7 @@ arrives on.
 | Camera | `src/spaghetti_guard/camera.py` | `CameraBackend` ABC, `RawSocketBackend`, `LibBackend` stub. |
 | Control | `src/spaghetti_guard/control.py` | paho-mqtt 2.x wrapper, exact payloads, state mirror, reconnect. |
 | Detector | `src/spaghetti_guard/detector.py` | YOLO call adapter, threshold + class filter, N-of-N debouncer. |
-| Notifier | `src/spaghetti_guard/notifier.py` | ntfy / Telegram / Home Assistant; failures suppressed. |
+| Notifier | `src/spaghetti_guard/notifier.py` | ntfy / Telegram / Home Assistant; failures suppressed. HTTPS verified against the OS trust store (not certifi) so TLS-inspection proxies don't silently drop alerts. |
 | Guard | `src/spaghetti_guard/guard.py` | State machine, watchdog, snapshot logging, run loop. |
 | CLI | `src/spaghetti_guard/cli.py` | argparse front door for run / live-verify / verify / replay / train / validate. |
 | Mock printer | `verification/mock_printer.py` | Fake camera + fake MQTT broker for offline integration. |

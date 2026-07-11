@@ -41,7 +41,7 @@ action:
   ask_timeout_action: stop  # what to do if operator doesn't respond in time
 
 notify:
-  backend: none          # none | ntfy | telegram | homeassistant
+  backend: ntfy          # none | ntfy | telegram | homeassistant
   # target may carry a secret (telegram bot token) — prefer setting it via
   # NTFY_TOPIC_URL / TELEGRAM_TARGET in secrets.local.txt; those override
   # this value when the matching backend is selected.

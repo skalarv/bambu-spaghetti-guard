@@ -84,6 +84,8 @@ are the numbers that matter. Don't promote a model whose FP/print-hour went
 | Guard armed but no frames | Camera channel not authorised. | Check the auth packet bytes against `docs/PROTOCOL.md` for your firmware. |
 | `ultralytics` not installed | Live mode without the optional GPU deps. | `pip install ultralytics opencv-python torch --index-url ...` per `docs/INSTALL.md`. |
 | Notifier silent | API token expired, network down. | Tail the log — every notify failure logs an exception line. |
+| Every alert fails `CERTIFICATE_VERIFY_FAILED` | TLS-inspection proxy root CA not in `certifi` (common on corporate Windows). | Already handled: `notifier.py` verifies against the OS trust store. If it recurs, confirm the proxy root is in the Windows cert store; do **NOT** install `pip-system-certs` — it breaks the P1S MQTT handshake. |
+| No ntfy push on phone (but log says delivered) | Not subscribed to the topic on the phone. | Open the ntfy app → subscribe to the exact topic in `NTFY_TOPIC_URL`. |
 | Guard pauses then nothing happens | Pause-mode without a person nearby. | Set `action.mode = stop` once you trust detection. |
 
 ## Stop / start / restart

@@ -57,6 +57,29 @@ Then tune `config.yaml`: pick `action.mode` (start with `pause`),
 `detector.conf_threshold` and `detector.consecutive_hits`, and your
 `notify.backend` if you want push alerts.
 
+### Push notifications (ntfy)
+
+The quickest path — no signup:
+
+1. Pick a **unique, hard-to-guess** topic (ntfy topics are public), e.g.
+   `spaghetti-guard-yz-cc3d60022c`, and set
+   `NTFY_TOPIC_URL=https://ntfy.sh/<your-topic>` in `secrets.local.txt`.
+2. Set `notify.backend: ntfy` in `config.yaml`.
+3. Install the **ntfy** app on your phone and **subscribe to the same topic**.
+   Until you subscribe, alerts reach the server but not your phone.
+
+You get a push on: confirmed failure (with the snapshot image), a control
+command that failed to reach the printer, camera-silent, and printer-report-
+silent.
+
+> **TLS note (corporate / inspected networks):** the notifier verifies HTTPS
+> against the **OS trust store** (`ssl.create_default_context()` in
+> `notifier.py`), not the bundled `certifi` roots. On a network with a
+> TLS-inspection proxy this is what lets alerts through — the proxy's root CA
+> lives in the Windows store, not in certifi. Do **not** "fix" a
+> `CERTIFICATE_VERIFY_FAILED` by installing `pip-system-certs`; that globally
+> patches `ssl` and breaks the P1S MQTT handshake (see `docs/RUNBOOK.md`).
+
 ## Step 4 — Get a model
 
 Two paths:
